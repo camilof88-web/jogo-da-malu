@@ -50,6 +50,19 @@
   .levelGrid { display:flex; flex-direction:column; gap:10px; margin:12px 0; }
   .levelCard { display:flex; align-items:center; gap:12px; background:#f7f2ff; border-radius:18px; padding:12px 14px; border:none; text-align:left; width:100%; }
   .levelCard:active { transform:scale(.97); }
+  .levelCard { position:relative; }
+  .slotCanvas { background:linear-gradient(180deg,#fdeff5,#f3e8ff); border-radius:12px; }
+  .slotDel { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:17px; opacity:.65; padding:6px; }
+  .linkBtn { background:none; border:none; color:#9b5de5; font-weight:800; font-size:13px; text-decoration:underline; margin-top:8px; padding:6px; }
+  #shopBtn { background:#eaf7f0; border:2px dashed #43aa8b; color:#2f8f6f; border-radius:999px; padding:8px 18px; font-weight:800; font-size:13px; margin-bottom:12px; }
+  .shopRow { display:flex; align-items:center; gap:10px; background:#f7f2ff; border-radius:16px; padding:8px 10px; margin-bottom:8px; text-align:left; }
+  .shopCanvas { background:linear-gradient(180deg,#fdeff5,#f3e8ff); border-radius:10px; }
+  .shopInfo { flex:1; }
+  .shopInfo b { display:block; color:#4a3a6b; font-size:14px; }
+  .shopInfo span { color:#9b5de5; font-size:11px; font-weight:700; }
+  .buyBtn { background:linear-gradient(135deg,#ffb703,#fb8500); border:none; color:#fff; font-weight:900; border-radius:999px; padding:9px 15px; font-size:13.5px; }
+  .buyBtn:disabled { background:#cfc9da; color:#fff; }
+  .shopOwned { color:#43aa8b; font-weight:800; font-size:12.5px; padding-right:6px; }
   .levelCard .emoji { font-size:30px; width:46px; height:46px; min-width:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
   .levelCard .info { flex:1; }
   .levelCard .info b { display:block; color:#4a3a6b; font-size:14.5px; }
@@ -59,7 +72,7 @@
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
-  <div id="hud"><div class="pill">⭐ <span id="score">0</span></div><div class="pill">🎯 <span id="targetsLeft">0</span></div></div>
+  <div id="hud"><div class="pill">⭐ <span id="score">0</span></div><div class="pill">🪙 <span id="coins">0</span></div><div class="pill">🎯 <span id="targetsLeft">0</span></div></div>
   <div id="msg"></div>
   <button class="topBtn" id="soundBtn">🔊</button>
   <button class="topBtn" id="dressBtn">👗</button>
@@ -69,7 +82,13 @@
   <div class="ctrl" id="throwBtn">🎯</div>
   <div class="ctrl" id="jumpBtn">⬆</div>
 
-  <div class="screen show" id="titleScreen"><div class="card">
+  <div class="screen show" id="slotScreen"><div class="card">
+    <h1>👧 Quem vai jogar?</h1>
+    <div class="sub">escolha um lugar pra salvar a aventura</div>
+    <div class="levelGrid" id="slotGrid"></div>
+  </div></div>
+
+  <div class="screen" id="titleScreen"><div class="card">
     <h1>🌸 Aventuras da Malu 🌸</h1>
     <div class="sub">3 fases pra explorar!</div>
     <div class="howto">
@@ -79,7 +98,8 @@
       <div><span class="ic">🎯</span> Pegar bolinha · tocar de novo arremessa</div>
       <div><span class="ic">📦</span> Acerte as caixinhas e pegue estrelas!</div>
     </div>
-    <button class="bigBtn" id="startBtn">Começar! 💜</button>
+    <button class="bigBtn" id="startBtn">Começar! 💜</button><br>
+    <button class="linkBtn" id="switchSlotBtn1">👤 Trocar jogador</button>
   </div></div>
 
   <div class="screen" id="dressScreen"><div class="card">
@@ -91,7 +111,9 @@
     <div class="optRow"><button class="arrow" data-cat="shoes" data-dir="-1">◀</button><span class="lbl">Sapato</span><span class="val" id="shoesVal"></span><button class="arrow" data-cat="shoes" data-dir="1">▶</button></div>
     <div class="optRow"><button class="arrow" data-cat="skin" data-dir="-1">◀</button><span class="lbl">Pele</span><span class="val" id="skinVal"></span><button class="arrow" data-cat="skin" data-dir="1">▶</button></div>
     <div class="optRow"><button class="arrow" data-cat="acc" data-dir="-1">◀</button><span class="lbl">Detalhe</span><span class="val" id="accVal"></span><button class="arrow" data-cat="acc" data-dir="1">▶</button></div>
-    <button id="randomBtn">🎲 Look surpresa!</button><br>
+    <div style="font-weight:800;color:#d6336c;margin:2px 0 6px">🪙 <span id="dressCoins">0</span> moedinhas</div>
+    <button id="randomBtn">🎲 Look surpresa!</button>
+    <button id="shopBtn">🛒 Lojinha</button><br>
     <button class="bigBtn" id="playBtn">Tudo pronto! 🎮</button>
   </div></div>
 
@@ -99,6 +121,15 @@
     <h1>🗺️ Escolha a fase</h1>
     <div class="sub">cada fase é mais desafiadora!</div>
     <div class="levelGrid" id="levelGrid"></div>
+    <button class="linkBtn" id="switchSlotBtn2">👤 Trocar jogador</button>
+  </div></div>
+
+  <div class="screen" id="shopScreen"><div class="card">
+    <h1>🛒 Lojinha da Malu</h1>
+    <div class="sub">junte moedinhas e desbloqueie looks novos!</div>
+    <div style="font-weight:800;color:#d6336c;margin-bottom:8px">Você tem 🪙 <span id="shopCoins">0</span></div>
+    <div id="shopList"></div>
+    <button class="bigBtn purple" id="shopCloseBtn">Voltar 👗</button>
   </div></div>
 
   <div class="screen" id="completeScreen"><div class="card">
@@ -126,13 +157,30 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,200));
 resize();
 
 const LOOKS={
-  hair:[{id:'cachospreso',name:'Cachos meio preso'},{id:'cachos',name:'Cachos soltos'},{id:'rabo',name:'Rabo de cavalo'},{id:'chiquinha',name:'Maria-chiquinha'},{id:'coque',name:'Coque com laço'},{id:'solto',name:'Solto com laço'}],
-  outfit:[{id:'florido',name:'Vestido florido'},{id:'vermelha',name:'Jaqueta vermelha'},{id:'arcoiris',name:'Camiseta arco-íris'},{id:'festa',name:'Vestido de festa'},{id:'ph',name:'Uniforme do pH'},{id:'flamengo',name:'Camisa do Mengão'}],
-  shoes:[{id:'botas',name:'Botas azuis'},{id:'tenis',name:'Tênis rosinha'},{id:'dourada',name:'Sapatilha dourada'}],
-  skin:[{id:'morena',name:'Morena'},{id:'clara',name:'Clarinha'},{id:'media',name:'Castanha'},{id:'escura',name:'Escura'}],
-  acc:[{id:'none',name:'Nenhum'},{id:'tiara',name:'Tiara'},{id:'oculos',name:'Óculos'}]
+  hair:[{id:'cachospreso',name:'Cachos meio preso',free:true},{id:'cachos',name:'Cachos soltos',free:true},{id:'rabo',name:'Rabo de cavalo',price:25},{id:'chiquinha',name:'Maria-chiquinha',price:25},{id:'coque',name:'Coque com laço',price:35},{id:'solto',name:'Solto com laço',price:30}],
+  outfit:[{id:'florido',name:'Vestido florido',free:true},{id:'vermelha',name:'Jaqueta vermelha',price:40},{id:'arcoiris',name:'Camiseta arco-íris',free:true},{id:'festa',name:'Vestido de festa',price:50},{id:'ph',name:'Uniforme do pH',price:45},{id:'flamengo',name:'Camisa do Mengão',price:45}],
+  shoes:[{id:'botas',name:'Botas azuis',price:25},{id:'tenis',name:'Tênis rosinha',free:true},{id:'dourada',name:'Sapatilha dourada',price:35}],
+  skin:[{id:'morena',name:'Morena',free:true},{id:'clara',name:'Clarinha',free:true},{id:'media',name:'Castanha',free:true},{id:'escura',name:'Escura',free:true}],
+  acc:[{id:'none',name:'Nenhum',free:true},{id:'tiara',name:'Tiara',price:20},{id:'oculos',name:'Óculos',price:20}]
 };
 const look={hair:0,outfit:2,shoes:1,skin:0,acc:0};
+const CATS=[['hair','Cabelo'],['outfit','Roupa'],['shoes','Sapato'],['acc','Detalhe']];
+
+// ===== SAVE / MOEDAS (memória do jogo, salva no aparelho) =====
+const SAVE_KEY='malu-saves-v1';
+let coins=0, activeSlot=-1;
+function starterOwned(){const o={};for(const c of ['hair','outfit','shoes','skin','acc'])o[c]=LOOKS[c].filter(it=>it.free).map(it=>it.id);return o;}
+function defaultSlot(){return {used:false,coins:0,look:{hair:0,outfit:2,shoes:1,skin:0,acc:0},owned:starterOwned(),levelBest:[0,0,0],levelDone:[false,false,false]};}
+let saves=(function(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(Array.isArray(s)&&s.length===4)return s;}catch(e){}return [defaultSlot(),defaultSlot(),defaultSlot(),defaultSlot()];})();
+function persistSaves(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(saves));}catch(e){}}
+function ownedArr(cat){return (activeSlot>=0?saves[activeSlot].owned[cat]:starterOwned()[cat]);}
+function isOwned(cat,id){return ownedArr(cat).indexOf(id)>=0;}
+function updateCoinsHud(){['coins','shopCoins','dressCoins'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=coins;});}
+function addCoins(n){coins+=n;updateCoinsHud();}
+function saveActive(){if(activeSlot<0)return;const sl=saves[activeSlot];sl.used=true;sl.coins=coins;sl.look={hair:look.hair,outfit:look.outfit,shoes:look.shoes,skin:look.skin,acc:look.acc};for(let i=0;i<3;i++){sl.levelBest[i]=levelBest[i];sl.levelDone[i]=levelDone[i];}persistSaves();}
+function nextOwned(cat,cur,dir){const n=LOOKS[cat].length;for(let k=1;k<=n;k++){const idx=(cur+dir*k+n*10)%n;if(isOwned(cat,LOOKS[cat][idx].id))return idx;}return cur;}
+function lookIdsFromSlot(sl){return {hair:LOOKS.hair[sl.look.hair].id,outfit:LOOKS.outfit[sl.look.outfit].id,shoes:LOOKS.shoes[sl.look.shoes].id,skin:LOOKS.skin[sl.look.skin].id,acc:LOOKS.acc[sl.look.acc].id};}
+function drawMiniMalu(cv,lk,scale){const w=cv.width/DPR,h=cv.height/DPR;const c=cv.getContext('2d');c.setTransform(DPR,0,0,DPR,0,0);c.clearRect(0,0,w,h);c.save();c.translate(w/2,h-6);c.scale(scale||0.6,scale||0.6);renderMalu(c,Object.assign({blink:1,t:0},lk));c.restore();}
 
 let audioCtx=null,soundOn=true;
 function initAudio(){if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();}
@@ -398,11 +446,11 @@ function update(dt){
     b.x+=b.vx;b.height+=b.vy;b.vy-=GRAVITY*0.75;b.vx*=0.997;
     const bg=platformTopAt(b.x-b.r,b.r*2);
     if(b.height<=bg){b.height=bg;if(Math.abs(b.vy)>1.6){b.vy=-b.vy*0.5;b.vx*=0.7;sfx.bounce();}else{b.settled=true;b.vy=0;b.vx=0;}}
-    for(const tg of targets){if(tg.hit)continue;const tTop=platformTopAt(tg.x,tg.w);if(b.x+b.r>tg.x&&b.x-b.r<tg.x+tg.w&&b.height<tTop+tg.h&&b.height+b.r>tTop){tg.hit=true;tg.popT=1;score+=10;scoreEl.textContent=score;updateTargetsHud();sfx.hit();burst(tg.x+tg.w/2,tTop+tg.h/2,tg.color,18,5);burst(tg.x+tg.w/2,tTop+tg.h/2,'#ffd166',10,4);showMsg('Acertou! +10 ⭐');b.vx*=0.3;}}
+    for(const tg of targets){if(tg.hit)continue;const tTop=platformTopAt(tg.x,tg.w);if(b.x+b.r>tg.x&&b.x-b.r<tg.x+tg.w&&b.height<tTop+tg.h&&b.height+b.r>tTop){tg.hit=true;tg.popT=1;score+=10;addCoins(2);scoreEl.textContent=score;updateTargetsHud();sfx.hit();burst(tg.x+tg.w/2,tTop+tg.h/2,tg.color,18,5);burst(tg.x+tg.w/2,tTop+tg.h/2,'#ffd166',10,4);showMsg('Acertou! +10 ⭐');b.vx*=0.3;}}
     if(b.x<-60||b.x>WORLD_END+60)b.gone=true;
   }
-  for(const s of stars){if(s.taken)continue;s.t+=dt*3;const sy=s.h+Math.sin(s.t)*6;if(Math.abs(s.x-(player.x+player.w/2))<30&&Math.abs(sy-(player.y+35))<40){s.taken=true;score+=5;scoreEl.textContent=score;sfx.star();burst(s.x,sy,'#ffd166',12,4);showMsg('+5 ⭐');}}
-  for(const b of badges){if(b.taken)continue;if(Math.abs(b.x-(player.x+player.w/2))<34&&Math.abs(b.h-(player.y+35))<48){b.taken=true;score+=20;scoreEl.textContent=score;sfx.hit();sfx.star();burst(b.x,b.h,'#f15bb5',18,5);burst(b.x,b.h,'#ffd166',12,4);showMsg('Insígnia mágica! ✨');}}
+  for(const s of stars){if(s.taken)continue;s.t+=dt*3;const sy=s.h+Math.sin(s.t)*6;if(Math.abs(s.x-(player.x+player.w/2))<30&&Math.abs(sy-(player.y+35))<40){s.taken=true;score+=5;addCoins(1);scoreEl.textContent=score;sfx.star();burst(s.x,sy,'#ffd166',12,4);showMsg('+5 ⭐ +1 🪙');}}
+  for(const b of badges){if(b.taken)continue;if(Math.abs(b.x-(player.x+player.w/2))<24&&Math.abs(b.h-(player.y+35))<32){b.taken=true;score+=20;addCoins(5);scoreEl.textContent=score;sfx.hit();sfx.star();burst(b.x,b.h,'#f15bb5',18,5);burst(b.x,b.h,'#ffd166',12,4);showMsg('Insígnia mágica! ✨ +5 🪙');}}
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.h+=p.vy;p.vy-=0.25;p.life-=dt*1.6;if(p.life<=0||p.h<0)particles.splice(i,1);}
   for(const tg of targets)if(tg.popT>0)tg.popT-=dt*2;
   if(!levelWon&&player.x>WORLD_END-90){levelWon=true;sfx.win();onLevelComplete();}
@@ -412,10 +460,12 @@ function onLevelComplete(){
   if(score>levelBest[currentLevelIdx])levelBest[currentLevelIdx]=score;
   const allT=targets.every(t=>t.hit),allS=stars.every(s=>s.taken);
   const badgesGot=badges.filter(b=>b.taken).length;
+  const coinBonus=10+badgesGot*5;
+  addCoins(coinBonus);saveActive();
   const faces=['😢','🙂','😄','🤩'];
   const fmsgs=['Não pegou nenhuma insígnia mágica… tenta de novo! 💪','Pegou 1 insígnia mágica! Quase lá! 🌟','Pegou 2 insígnias mágicas! Muito bem! 🌟🌟','Pegou as 3 insígnias mágicas! Você arrasou! 🌟🌟🌟'];
   const slots=[0,1,2].map(i=>`<span style="font-size:30px;opacity:${i<badgesGot?1:0.28};filter:${i<badgesGot?'none':'grayscale(1)'}">🏅</span>`).join(' ');
-  document.getElementById('completeBadges').innerHTML=`<div style="font-size:56px;line-height:1.1">${faces[badgesGot]}</div><div style="margin:5px 0 2px">${slots}</div><div style="color:#9b5de5;font-weight:800;font-size:13px">${fmsgs[badgesGot]}</div>`;
+  document.getElementById('completeBadges').innerHTML=`<div style="font-size:56px;line-height:1.1">${faces[badgesGot]}</div><div style="margin:5px 0 2px">${slots}</div><div style="color:#9b5de5;font-weight:800;font-size:13px">${fmsgs[badgesGot]}</div><div style="color:#d6336c;font-weight:800;font-size:15px;margin-top:6px">+${coinBonus} 🪙 moedinhas!</div>`;
   let txt=`Você fez ${score} pontos nesta fase!`;
   if(allT&&allS)txt+=' Pegou TUDO! 🏆';else if(allT)txt+=' Todas as caixinhas! 👏';
   const isLast=currentLevelIdx>=LEVELS.length-1;
@@ -639,8 +689,8 @@ function drawDressPreview(now){
 }
 function refreshLookLabels(){document.getElementById('hairVal').textContent=LOOKS.hair[look.hair].name;document.getElementById('outfitVal').textContent=LOOKS.outfit[look.outfit].name;document.getElementById('shoesVal').textContent=LOOKS.shoes[look.shoes].name;document.getElementById('skinVal').textContent=LOOKS.skin[look.skin].name;document.getElementById('accVal').textContent=LOOKS.acc[look.acc].name;}
 refreshLookLabels();
-document.querySelectorAll('.arrow').forEach(btn=>{btn.addEventListener('click',()=>{initAudio();const cat=btn.dataset.cat,dir=parseInt(btn.dataset.dir);look[cat]=(look[cat]+dir+LOOKS[cat].length)%LOOKS[cat].length;refreshLookLabels();sfx.pop();});});
-document.getElementById('randomBtn').addEventListener('click',()=>{initAudio();look.hair=Math.floor(Math.random()*LOOKS.hair.length);look.outfit=Math.floor(Math.random()*LOOKS.outfit.length);look.shoes=Math.floor(Math.random()*LOOKS.shoes.length);look.acc=Math.floor(Math.random()*LOOKS.acc.length);refreshLookLabels();sfx.pick();});
+document.querySelectorAll('.arrow').forEach(btn=>{btn.addEventListener('click',()=>{initAudio();const cat=btn.dataset.cat,dir=parseInt(btn.dataset.dir);look[cat]=nextOwned(cat,look[cat],dir);refreshLookLabels();saveActive();sfx.pop();});});
+document.getElementById('randomBtn').addEventListener('click',()=>{initAudio();for(const c of ['hair','outfit','shoes','acc']){const ow=LOOKS[c].map((it,i)=>i).filter(i=>isOwned(c,LOOKS[c][i].id));if(ow.length)look[c]=ow[Math.floor(Math.random()*ow.length)];}refreshLookLabels();saveActive();sfx.pick();});
 
 // ===== SELEÇÃO DE FASE =====
 function buildLevelGrid(){
@@ -658,15 +708,74 @@ function buildLevelGrid(){
 // ===== FLUXO =====
 const titleScreen=document.getElementById('titleScreen'),dressScreen=document.getElementById('dressScreen'),levelScreen=document.getElementById('levelScreen'),completeScreen=document.getElementById('completeScreen'),finalScreen=document.getElementById('finalScreen');
 const dressBtn=document.getElementById('dressBtn'),mapBtn=document.getElementById('mapBtn');
-started=false;paused=false;resetWorld(0);
+const slotScreen=document.getElementById('slotScreen'),shopScreen=document.getElementById('shopScreen');
+const allScreens=[slotScreen,titleScreen,dressScreen,levelScreen,completeScreen,finalScreen,shopScreen];
+function showOnly(scr){allScreens.forEach(s=>s.classList.remove('show'));if(scr)scr.classList.add('show');}
+
+// --- Slots de save ---
+function buildSlotGrid(){
+  const grid=document.getElementById('slotGrid');grid.innerHTML='';
+  saves.forEach((sl,i)=>{
+    const btn=document.createElement('button');btn.className='levelCard';
+    if(sl.used){
+      const done=sl.levelDone.filter(Boolean).length;
+      btn.innerHTML=`<canvas class="slotCanvas" width="${Math.round(60*DPR)}" height="${Math.round(74*DPR)}" style="width:44px;height:54px"></canvas><div class="info"><b>Jogadora ${i+1}</b><span>🪙 ${sl.coins} · ${done}/3 fases</span></div><span class="slotDel" data-i="${i}">🗑️</span>`;
+    }else{
+      btn.innerHTML=`<div class="emoji">➕</div><div class="info"><b>Espaço ${i+1}</b><span>Vazio — começar nova aventura</span></div>`;
+    }
+    btn.addEventListener('click',(e)=>{if(e.target.classList.contains('slotDel'))return;selectSlot(i);});
+    grid.appendChild(btn);
+  });
+  saves.forEach((sl,i)=>{if(sl.used){const cv=grid.children[i].querySelector('.slotCanvas');if(cv)drawMiniMalu(cv,lookIdsFromSlot(sl),0.58);}});
+  grid.querySelectorAll('.slotDel').forEach(d=>d.addEventListener('click',(e)=>{e.stopPropagation();const i=+d.dataset.i;if(confirm('Apagar a aventura da Jogadora '+(i+1)+'? Não dá pra desfazer.')){saves[i]=defaultSlot();persistSaves();buildSlotGrid();sfx.pop();}}));
+}
+function selectSlot(i){
+  activeSlot=i;const sl=saves[i];sl.used=true;
+  look.hair=sl.look.hair;look.outfit=sl.look.outfit;look.shoes=sl.look.shoes;look.skin=sl.look.skin;look.acc=sl.look.acc;
+  coins=sl.coins;updateCoinsHud();
+  for(let k=0;k<3;k++){levelBest[k]=sl.levelBest[k];levelDone[k]=sl.levelDone[k];}
+  totalScore=0;started=false;persistSaves();refreshLookLabels();
+  showOnly(titleScreen);sfx.star();
+}
+function goToSlots(){saveActive();started=false;paused=true;dressBtn.style.display='none';mapBtn.style.display='none';buildSlotGrid();showOnly(slotScreen);sfx.pop();}
+
+// --- Lojinha ---
+function openShop(){buildShop();updateCoinsHud();paused=true;showOnly(shopScreen);sfx.pop();}
+function buildShop(){
+  const list=document.getElementById('shopList');list.innerHTML='';
+  for(const [cat,label] of CATS){
+    LOOKS[cat].forEach((it,idx)=>{
+      if(it.free)return;
+      const owned=isOwned(cat,it.id),can=coins>=it.price;
+      const row=document.createElement('div');row.className='shopRow';
+      row.innerHTML=`<canvas class="shopCanvas" width="${Math.round(48*DPR)}" height="${Math.round(60*DPR)}" style="width:38px;height:48px"></canvas><div class="shopInfo"><b>${it.name}</b><span>${label}</span></div>`+(owned?`<span class="shopOwned">✓ já tem</span>`:`<button class="buyBtn" data-cat="${cat}" data-idx="${idx}" ${can?'':'disabled'}>🪙 ${it.price}</button>`);
+      list.appendChild(row);
+      const lk=lookIdsFromSlot(saves[activeSlot]);lk[cat]=it.id;
+      drawMiniMalu(row.querySelector('.shopCanvas'),lk,0.46);
+    });
+  }
+  list.querySelectorAll('.buyBtn').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.cat,+b.dataset.idx)));
+}
+function buyItem(cat,idx){
+  const it=LOOKS[cat][idx];if(isOwned(cat,it.id)||coins<it.price)return;
+  coins-=it.price;saves[activeSlot].owned[cat].push(it.id);look[cat]=idx;
+  updateCoinsHud();saveActive();refreshLookLabels();buildShop();
+  sfx.win();showMsg('Comprou: '+it.name+'! 🎉');
+}
+
+started=false;paused=false;resetWorld(0);buildSlotGrid();
 function startLevel(idx){resetWorld(idx);[titleScreen,dressScreen,levelScreen,completeScreen,finalScreen].forEach(s=>s.classList.remove('show'));dressBtn.style.display='block';mapBtn.style.display='block';started=true;paused=false;sfx.star();showMsg(LEVELS[idx].name+' 🎬');}
-document.getElementById('startBtn').addEventListener('click',()=>{initAudio();titleScreen.classList.remove('show');dressScreen.classList.add('show');sfx.pop();});
+document.getElementById('startBtn').addEventListener('click',()=>{initAudio();updateCoinsHud();titleScreen.classList.remove('show');dressScreen.classList.add('show');sfx.pop();});
 document.getElementById('playBtn').addEventListener('click',()=>{initAudio();dressScreen.classList.remove('show');if(started){paused=false;sfx.star();}else{buildLevelGrid();levelScreen.classList.add('show');sfx.pop();}});
-dressBtn.addEventListener('click',()=>{paused=true;dressScreen.classList.add('show');sfx.pop();});
+dressBtn.addEventListener('click',()=>{paused=true;updateCoinsHud();dressScreen.classList.add('show');sfx.pop();});
 mapBtn.addEventListener('click',()=>{paused=true;buildLevelGrid();levelScreen.classList.add('show');sfx.pop();});
 document.getElementById('nextLevelBtn').addEventListener('click',()=>{completeScreen.classList.remove('show');startLevel(Math.min(currentLevelIdx+1,LEVELS.length-1));});
 document.getElementById('mapFromComplete').addEventListener('click',()=>{completeScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');sfx.pop();});
-document.getElementById('restartAllBtn').addEventListener('click',()=>{totalScore=0;levelDone[0]=levelDone[1]=levelDone[2]=false;finalScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');});
+document.getElementById('restartAllBtn').addEventListener('click',()=>{totalScore=0;finalScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');});
+document.getElementById('shopBtn').addEventListener('click',openShop);
+document.getElementById('shopCloseBtn').addEventListener('click',()=>{updateCoinsHud();showOnly(dressScreen);sfx.pop();});
+document.getElementById('switchSlotBtn1').addEventListener('click',goToSlots);
+document.getElementById('switchSlotBtn2').addEventListener('click',goToSlots);
 
 // botão de roupa também precisa fechar o provador e voltar pro jogo
 document.getElementById('playBtnInGameClose');
