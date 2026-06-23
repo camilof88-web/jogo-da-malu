@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.camilof88_web.twa",
+    "sha256_cert_fingerprints": ["03:9C:42:3B:DE:42:45:F1:F9:C3:68:66:80:98:7E:19:C1:5D:86:CA:C4:F3:09:9D:53:F6:E9:6D:11:7F:A3:3E"]
+  }
+}]
