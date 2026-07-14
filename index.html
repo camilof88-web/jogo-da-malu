@@ -40,7 +40,7 @@
   .bigBtn:active { transform:scale(.95); }
   .bigBtn.purple { background:linear-gradient(135deg,#9b5de5,#f15bb5); box-shadow:0 6px 18px rgba(155,93,229,0.5); }
   .bigBtn.green { background:linear-gradient(135deg,#43aa8b,#90be6d); box-shadow:0 6px 18px rgba(67,170,139,0.45); }
-  #dressCanvas { width:200px; height:240px; margin:2px auto 8px; background:linear-gradient(180deg,#fdeff5,#f3e8ff); border-radius:20px; display:block; box-shadow:inset 0 0 0 3px #ffd9ec; }
+  #dressCanvas { width:170px; height:204px; background:linear-gradient(160deg,#fdeff5,#f3e8ff); border-radius:22px; display:block; box-shadow:0 6px 28px rgba(155,93,229,0.22),inset 0 0 0 2px #ffd9ec; margin:0 auto; }
   .optRow { display:flex; align-items:center; justify-content:space-between; background:#f7f2ff; border-radius:999px; padding:6px 8px; margin-bottom:8px; }
   .optRow .lbl { font-size:10.5px; font-weight:800; color:#9b5de5; text-transform:uppercase; letter-spacing:.6px; width:58px; text-align:left; padding-left:8px; }
   .optRow .val { flex:1; font-weight:800; color:#4a3a6b; font-size:13.5px; }
@@ -79,6 +79,22 @@
   .levelCard .info { flex:1; }
   .levelCard .info b { display:block; color:#4a3a6b; font-size:14.5px; }
   .levelCard .info span { color:#9b5de5; font-size:11.5px; font-weight:700; }
+  /* ===== VITRINE (nova tela de roupa estilo The Sims) ===== */
+  .vitrine-wrap { display:flex; flex-direction:column; width:100%; max-width:480px; height:100%; padding:10px 12px 14px; gap:7px; overflow:hidden; }
+  .vitrine-header { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .vitrine-coins-disp { font-weight:800; color:#d6336c; font-size:15px; flex:1; }
+  .vitrine-random { background:#fff0f6; border:2px dashed #f15bb5; color:#d6336c; border-radius:50%; width:38px; height:38px; min-width:38px; font-size:17px; flex-shrink:0; }
+  .vitrine-preview { display:flex; justify-content:center; flex-shrink:0; }
+  .vcatTabs { display:flex; gap:6px; overflow-x:auto; flex-shrink:0; scrollbar-width:none; padding-bottom:2px; }
+  .vcatTabs::-webkit-scrollbar { display:none; }
+  .vcatTab { border:none; border-radius:999px; padding:7px 15px; font-weight:800; font-size:12px; background:#f7f2ff; color:#9b5de5; white-space:nowrap; flex-shrink:0; }
+  .vcatTab.active { background:linear-gradient(135deg,#9b5de5,#f15bb5); color:#fff; box-shadow:0 3px 10px rgba(155,93,229,0.35); }
+  .vitrineGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; overflow-y:auto; flex:1; padding:2px; }
+  .vitem { background:#f7f2ff; border-radius:14px; padding:6px 4px 5px; display:flex; flex-direction:column; align-items:center; gap:3px; border:2.5px solid transparent; cursor:pointer; transition:transform .08s,border-color .1s; -webkit-tap-highlight-color:transparent; }
+  .vitem.vequipped { border-color:#9b5de5; background:#ede5ff; }
+  .vitem:active { transform:scale(.93); }
+  .vitem-name { font-size:9.5px; font-weight:800; color:#4a3a6b; text-align:center; line-height:1.25; width:100%; padding:0 2px; }
+  .vitem-badge { font-size:10.5px; font-weight:900; height:15px; display:flex; align-items:center; }
 </style>
 </head>
 <body>
@@ -115,20 +131,18 @@
     <button class="linkBtn" id="switchSlotBtn1">👤 Trocar jogador</button>
   </div></div>
 
-  <div class="screen" id="dressScreen"><div class="card">
-    <h1>👗 Vestir a Malu</h1>
-    <div class="sub">monte o look da aventura!</div>
-    <canvas id="dressCanvas"></canvas>
-    <div class="optRow"><button class="arrow" data-cat="hair" data-dir="-1">◀</button><span class="lbl">Cabelo</span><span class="val" id="hairVal"></span><button class="arrow" data-cat="hair" data-dir="1">▶</button></div>
-    <div class="optRow"><button class="arrow" data-cat="outfit" data-dir="-1">◀</button><span class="lbl">Roupa</span><span class="val" id="outfitVal"></span><button class="arrow" data-cat="outfit" data-dir="1">▶</button></div>
-    <div class="optRow"><button class="arrow" data-cat="shoes" data-dir="-1">◀</button><span class="lbl">Sapato</span><span class="val" id="shoesVal"></span><button class="arrow" data-cat="shoes" data-dir="1">▶</button></div>
-    <div class="optRow"><button class="arrow" data-cat="skin" data-dir="-1">◀</button><span class="lbl">Pele</span><span class="val" id="skinVal"></span><button class="arrow" data-cat="skin" data-dir="1">▶</button></div>
-    <div class="optRow"><button class="arrow" data-cat="acc" data-dir="-1">◀</button><span class="lbl">Detalhe</span><span class="val" id="accVal"></span><button class="arrow" data-cat="acc" data-dir="1">▶</button></div>
-    <div style="font-weight:800;color:#d6336c;margin:2px 0 6px">🪙 <span id="dressCoins">0</span> moedinhas</div>
-    <button id="randomBtn">🎲 Look surpresa!</button>
-    <button id="shopBtn">🛒 Lojinha</button><br>
-    <button class="bigBtn" id="playBtn">Tudo pronto! 🎮</button>
-  </div></div>
+  <div class="screen" id="dressScreen">
+    <div class="vitrine-wrap">
+      <div class="vitrine-header">
+        <div class="vitrine-coins-disp">🪙 <span id="dressCoins">0</span></div>
+        <button id="randomBtn" class="vitrine-random">🎲</button>
+        <button class="bigBtn" id="playBtn" style="padding:8px 18px;font-size:14px;margin:0">Jogar! 🎮</button>
+      </div>
+      <div class="vitrine-preview"><canvas id="dressCanvas"></canvas></div>
+      <div class="vcatTabs" id="vcatTabs"></div>
+      <div class="vitrineGrid" id="vitrineGrid"></div>
+    </div>
+  </div>
 
   <div class="screen" id="levelScreen"><div class="card">
     <h1>🗺️ Escolha a fase</h1>
@@ -137,13 +151,7 @@
     <button class="linkBtn" id="switchSlotBtn2">👤 Trocar jogador</button>
   </div></div>
 
-  <div class="screen" id="shopScreen"><div class="card">
-    <h1>🛒 Lojinha da Malu</h1>
-    <div class="sub">junte moedinhas e desbloqueie looks novos!</div>
-    <div style="font-weight:800;color:#d6336c;margin-bottom:8px">Você tem 🪙 <span id="shopCoins">0</span></div>
-    <div id="shopList"></div>
-    <button class="bigBtn purple" id="shopCloseBtn">Voltar 👗</button>
-  </div></div>
+  <span id="shopCoins" style="display:none">0</span>
 
   <div class="screen" id="completeScreen"><div class="card">
     <h1 id="completeTitle">🎉 Fase completa! 🎉</h1>
@@ -171,9 +179,9 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,200));
 resize();
 
 const LOOKS={
-  hair:[{id:'cachospreso',name:'Cachos meio preso',free:true},{id:'cachos',name:'Cachos soltos',free:true},{id:'rabo',name:'Rabo de cavalo',price:25},{id:'chiquinha',name:'Maria-chiquinha',price:25},{id:'coque',name:'Coque com laço',price:35},{id:'solto',name:'Solto com laço',price:30}],
-  outfit:[{id:'florido',name:'Vestido florido',free:true},{id:'vermelha',name:'Jaqueta vermelha',price:40},{id:'arcoiris',name:'Camiseta arco-íris',free:true},{id:'festa',name:'Vestido de festa',price:50},{id:'ph',name:'Uniforme do pH',price:45},{id:'flamengo',name:'Camisa do Mengão',price:45}],
-  shoes:[{id:'botas',name:'Botas azuis',price:25},{id:'tenis',name:'Tênis rosinha',free:true},{id:'dourada',name:'Sapatilha dourada',price:35}],
+  hair:[{id:'cachospreso',name:'Cachos meio preso',free:true},{id:'cachos',name:'Cachos soltos',free:true},{id:'rabo',name:'Rabo de cavalo',price:25},{id:'chiquinha',name:'Maria-chiquinha',price:25},{id:'coque',name:'Coque com laço',price:35},{id:'solto',name:'Solto com laço',price:30},{id:'afro',name:'Afro arredondado',price:35},{id:'trancas',name:'Tranças',price:40},{id:'duasmaria',name:'Duas Marias',price:30}],
+  outfit:[{id:'florido',name:'Vestido florido',free:true},{id:'vermelha',name:'Jaqueta vermelha',price:40},{id:'arcoiris',name:'Camiseta arco-íris',free:true},{id:'festa',name:'Vestido de festa',price:50},{id:'ph',name:'Uniforme do pH',price:45},{id:'flamengo',name:'Camisa do Mengão',price:45},{id:'fada',name:'Fantasia de fada',price:55},{id:'natacao',name:'Maiô de praia',price:45}],
+  shoes:[{id:'botas',name:'Botas azuis',price:25},{id:'tenis',name:'Tênis rosinha',free:true},{id:'dourada',name:'Sapatilha dourada',price:35},{id:'bailarina',name:'Sapatilha de balé',price:30},{id:'sandalia',name:'Sandália colorida',price:20}],
   skin:[{id:'morena',name:'Morena',free:true},{id:'clara',name:'Clarinha',free:true},{id:'media',name:'Castanha',free:true},{id:'escura',name:'Escura',free:true}],
   acc:[{id:'none',name:'Nenhum',free:true},{id:'tiara',name:'Tiara',price:20},{id:'oculos',name:'Óculos',price:20}]
 };
@@ -224,6 +232,8 @@ const SKIN_TONES={morena:['#c98a5c','#a86f45'],clara:['#e8b78f','#cf9a72'],media
 function drawShoe(g,ax,type,front){
   if(type==='botas'){g.fillStyle=front?'#3a5fcd':'#2f4bc7';rrp(g,ax-7,-14,15,13,4);g.fill();g.fillStyle='#274690';rrp(g,ax-7,-3.5,16,4,2);g.fill();}
   else if(type==='tenis'){g.fillStyle=front?'#ffffff':'#e8e8ee';rrp(g,ax-7,-9,16,8,3.5);g.fill();g.fillStyle='#f7b8d4';g.beginPath();g.arc(ax+8,-5,4,-Math.PI/2,Math.PI/2);g.fill();g.fillStyle='#aecbf5';rrp(g,ax-7,-9,4,8,2);g.fill();g.fillStyle='#fff';rrp(g,ax-7.5,-2.5,17,3,1.5);g.fill();}
+  else if(type==='bailarina'){g.fillStyle=front?'#ffb6d9':'#ff9fc9';rrp(g,ax-8,-7,16,7,3.5);g.fill();g.fillStyle='rgba(255,255,255,0.5)';rrp(g,ax-8,-7,16,4,3.5);g.fill();g.strokeStyle='#ff7ec0';g.lineWidth=1.6;g.lineCap='round';g.beginPath();g.moveTo(ax-5,-1);g.quadraticCurveTo(ax,3,ax+5,0);g.stroke();}
+  else if(type==='sandalia'){g.fillStyle=front?'#ffd166':'#ffb703';rrp(g,ax-7,-5,14,5,2.5);g.fill();g.strokeStyle=front?'#fb8500':'#e07800';g.lineWidth=2.2;g.lineCap='round';g.beginPath();g.moveTo(ax-5,-5);g.lineTo(ax-2,-12);g.moveTo(ax+4,-5);g.lineTo(ax+2,-12);g.moveTo(ax-6,-3);g.lineTo(ax+6,-3);g.stroke();}
   else{g.fillStyle=front?'#f4c430':'#d9a821';rrp(g,ax-6,-6,14,6,3);g.fill();g.fillStyle='#fff3c4';g.beginPath();g.arc(ax+1,-5,1.6,0,Math.PI*2);g.fill();}
 }
 function drawBow(g,cx,cy,scale=1,color='#f15bb5'){g.save();g.translate(cx,cy);g.scale(scale,scale);g.fillStyle=color;g.beginPath();g.moveTo(0,0);g.lineTo(-7,-5);g.lineTo(-7,3);g.closePath();g.fill();g.beginPath();g.moveTo(0,0);g.lineTo(7,-5);g.lineTo(7,3);g.closePath();g.fill();g.fillStyle=shade(color,-30);g.beginPath();g.arc(0,0,2.4,0,Math.PI*2);g.fill();g.restore();}
@@ -281,6 +291,19 @@ function renderMalu(g,o){
     g.fillStyle='#fdfdfd';g.beginPath();g.arc(-14,-48-bob,5.5,0,Math.PI*2);g.arc(14,-48-bob,5.5,0,Math.PI*2);g.fill();
     g.fillStyle='#161616';g.beginPath();g.arc(-14,-48-bob,3.4,0,Math.PI*2);g.arc(14,-48-bob,3.4,0,Math.PI*2);g.fill();
     g.fillStyle='#fdfdfd';g.beginPath();g.arc(7,-45-bob,3,0,Math.PI*2);g.fill();g.fillStyle='#e3162e';starPath(g,7,-45-bob,1.6,0.8);g.fill();
+  }else if(o.outfit==='fada'){
+    const dg=g.createLinearGradient(0,-54,0,-16);dg.addColorStop(0,'#e0aaff');dg.addColorStop(1,'#c77dff');g.fillStyle=dg;
+    g.beginPath();g.moveTo(-12,-52-bob);g.lineTo(12,-52-bob);g.quadraticCurveTo(23,-34,25,-18);g.quadraticCurveTo(0,-12,-25,-18);g.quadraticCurveTo(-23,-34,-12,-52-bob);g.fill();
+    g.fillStyle='rgba(255,255,255,0.75)';for(let i=0;i<9;i++){const sx2=-13+(i*9.1)%26,sy2=-49+((i*13)%30);g.beginPath();g.arc(sx2,sy2-bob*0.4,1.3+0.5*Math.sin(t*4+i),0,Math.PI*2);g.fill();}
+    g.fillStyle='#d4a0ff';g.beginPath();g.arc(-14,-48-bob,6.5,0,Math.PI*2);g.arc(14,-48-bob,6.5,0,Math.PI*2);g.fill();
+    g.fillStyle='rgba(240,210,255,0.55)';g.beginPath();g.ellipse(-21,-39-bob,11,6,Math.PI*0.3,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(21,-39-bob,11,6,-Math.PI*0.3,0,Math.PI*2);g.fill();
+    g.strokeStyle='rgba(200,150,255,0.6)';g.lineWidth=1.2;g.beginPath();g.ellipse(-21,-39-bob,11,6,Math.PI*0.3,0,Math.PI*2);g.stroke();g.beginPath();g.ellipse(21,-39-bob,11,6,-Math.PI*0.3,0,Math.PI*2);g.stroke();
+  }else if(o.outfit==='natacao'){
+    g.fillStyle='#06d6a0';rrp(g,-11,-52-bob,22,37,8);g.fill();
+    g.fillStyle='#4cc9f0';rrp(g,-11,-40-bob,22,9,0);g.fill();
+    g.strokeStyle='#04a07a';g.lineWidth=4.5;g.lineCap='round';g.beginPath();g.moveTo(-5,-52-bob);g.lineTo(-10,-43-bob);g.moveTo(5,-52-bob);g.lineTo(10,-43-bob);g.stroke();
+    g.fillStyle='#06d6a0';g.beginPath();g.arc(-13,-48-bob,5.5,0,Math.PI*2);g.arc(13,-48-bob,5.5,0,Math.PI*2);g.fill();
+    g.fillStyle='#ffd166';starPath(g,0,-32-bob,3.5,1.6);g.fill();
   }else{
     g.fillStyle='#fdfdfd';rrp(g,-13,-52-bob,26,22,8);g.fill();
     g.fillStyle='#f2f2f2';g.beginPath();g.arc(-13,-48-bob,5.5,0,Math.PI*2);g.arc(13,-48-bob,5.5,0,Math.PI*2);g.fill();
@@ -311,6 +334,23 @@ function renderMalu(g,o){
   }else if(o.hair==='solto'){
     g.fillStyle=HAIR;[[-18,hy+4,9.5],[-21,hy+16,9],[-19,hy+29+pb*.5,8.2],[-14,hy+39+pb*.7,7],[16,hy+8,8.5],[20,hy+20+pb*.4,8],[17,hy+32+pb*.6,6.8],[-7,hy+39+pb*.6,6],[6,hy+39+pb*.6,6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
     g.fillStyle=HAIR_HI;[[-20,hy+21,3.2],[18,hy+23,2.8],[-12,hy+37,2.6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+  }else if(o.hair==='afro'){
+    g.fillStyle=HAIR;
+    [[-22,hy+2,13],[-28,hy+14,12],[-25,hy+27,11],[-17,hy+37+pb*.5,10],[22,hy+4,13],[27,hy+16,12],[24,hy+29,11],[15,hy+38+pb*.5,9.5],[-8,hy+42+pb*.6,9],[8,hy+42+pb*.6,9],[0,hy+45+pb*.6,8]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    g.fillStyle=HAIR_HI;[[-25,hy+16,4.2],[25,hy+19,4],[-10,hy+39,3.4],[10,hy+39,3.4],[0,hy+42,3]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+  }else if(o.hair==='trancas'){
+    g.fillStyle=HAIR;
+    for(let i=0;i<5;i++){g.beginPath();g.arc(-12,hy+10+i*11,5.2-i*0.25,0,Math.PI*2);g.fill();}
+    for(let i=0;i<5;i++){g.beginPath();g.arc(12,hy+10+i*11,5.2-i*0.25,0,Math.PI*2);g.fill();}
+    g.fillStyle=HAIR_HI;
+    for(let i=0;i<5;i++){g.beginPath();g.arc(-10,hy+14+i*11,1.8,0,Math.PI*2);g.arc(10,hy+14+i*11,1.8,0,Math.PI*2);g.fill();}
+    g.strokeStyle='#ff7ec0';g.lineWidth=1.8;g.lineCap='round';
+    for(let i=0;i<5;i++){g.beginPath();g.moveTo(-17,hy+14+i*11);g.lineTo(-7,hy+14+i*11);g.moveTo(7,hy+14+i*11);g.lineTo(17,hy+14+i*11);g.stroke();}
+  }else if(o.hair==='duasmaria'){
+    g.fillStyle=HAIR;
+    [[-26,hy-1,10.5],[-30,hy+11,10],[-28,hy+22,9]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    [[26,hy-1,10.5],[30,hy+11,10],[28,hy+22,9]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    g.fillStyle=HAIR_HI;[[-28,hy+13,3.6],[28,hy+13,3.6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
   }
   // rosto base — formato infantil: bochechas cheias + queixo suave e arredondado
   g.fillStyle=SKIN;g.beginPath();
@@ -338,6 +378,21 @@ function renderMalu(g,o){
   else if(o.hair==='chiquinha'){g.fillStyle=HAIR;[[18,hy-7,7.4],[22,hy+5+pb,6.8],[24,hy+16+pb*1.3,6.2],[21,hy+26+pb*1.5,5.2]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});g.fillStyle=HAIR_HI;g.beginPath();g.arc(22,hy+10+pb,2.8,0,Math.PI*2);g.arc(23,hy+22+pb*1.4,2.4,0,Math.PI*2);g.fill();g.fillStyle='#4cc9f0';g.beginPath();g.arc(17.5,hy-3,2.3,0,Math.PI*2);g.fill();g.fillStyle='#ffd166';g.beginPath();g.arc(-18.5,hy-1,2.3,0,Math.PI*2);g.fill();}
   else if(o.hair==='coque'){const cb=Math.sin(t*3)*1.3;g.fillStyle=HAIR;g.beginPath();g.arc(0,hy-24+cb*0.3,9.5,0,Math.PI*2);g.fill();g.fillStyle=HAIR_HI;[[-7,hy-31+cb,3.6],[6,hy-32+cb,3.4],[0,hy-34+cb,3],[10,hy-26+cb,2.6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});drawBow(g,8,hy-18,1,'#f15bb5');}
   else if(o.hair==='solto'){drawBow(g,0,hy-21,1.15,'#ffb6d9');}
+  else if(o.hair==='afro'){
+    g.fillStyle=HAIR;
+    [[-12,hy-21,11],[-2,hy-25,12],[9,hy-20,11],[-6,hy-17,8],[6,hy-17,8],[15,hy-14,8],[-18,hy-14,8],[0,hy-28,9]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    g.fillStyle=HAIR_HI;[[-7,hy-22,3.8],[3,hy-24,4],[11,hy-18,3.4]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+  }
+  else if(o.hair==='trancas'){
+    g.fillStyle=HAIR;[[-10,hy-14,6],[0,hy-17,6.8],[10,hy-14,6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    drawBow(g,0,hy-15,0.72,'#ff7ec0');
+  }
+  else if(o.hair==='duasmaria'){
+    g.fillStyle=HAIR;
+    [[24,hy-8,9],[30,hy+3,8.5],[28,hy+14,7.5],[-24,hy-8,9],[-30,hy+3,8.5],[-28,hy+14,7.5]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
+    g.fillStyle='#ffd166';g.beginPath();g.arc(21,hy-8,3.2,0,Math.PI*2);g.fill();
+    g.fillStyle='#4cc9f0';g.beginPath();g.arc(-21,hy-8,3.2,0,Math.PI*2);g.fill();
+  }
   if(o.acc==='tiara'){g.strokeStyle='#ff7ec0';g.lineWidth=3.2;g.lineCap='round';g.beginPath();g.arc(0,hy+1,R-0.5,Math.PI*1.18,Math.PI*1.82);g.stroke();g.fillStyle='#ffd166';for(let i=-1;i<=1;i++){const a=Math.PI*1.5+i*0.32;g.beginPath();g.arc(Math.cos(a)*(R-0.5),hy+1+Math.sin(a)*(R-0.5),2.1,0,Math.PI*2);g.fill();}}
   // ROSTO traços
   const blink=o.blink!==undefined?o.blink:1;
@@ -849,10 +904,77 @@ function drawDressPreview(now){
   renderMalu(dctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,bodyBob:Math.sin(t*2.2)*1.2,ponyB:Math.sin(t*2.2-0.5)*1.5,blink:blinkNow(),t});
   dctx.restore();
 }
-function refreshLookLabels(){document.getElementById('hairVal').textContent=LOOKS.hair[look.hair].name;document.getElementById('outfitVal').textContent=LOOKS.outfit[look.outfit].name;document.getElementById('shoesVal').textContent=LOOKS.shoes[look.shoes].name;document.getElementById('skinVal').textContent=LOOKS.skin[look.skin].name;document.getElementById('accVal').textContent=LOOKS.acc[look.acc].name;}
-refreshLookLabels();
-document.querySelectorAll('.arrow').forEach(btn=>{btn.addEventListener('click',()=>{initAudio();const cat=btn.dataset.cat,dir=parseInt(btn.dataset.dir);look[cat]=nextOwned(cat,look[cat],dir);refreshLookLabels();saveActive();sfx.pop();});});
-document.getElementById('randomBtn').addEventListener('click',()=>{initAudio();for(const c of ['hair','outfit','shoes','acc']){const ow=LOOKS[c].map((it,i)=>i).filter(i=>isOwned(c,LOOKS[c][i].id));if(ow.length)look[c]=ow[Math.floor(Math.random()*ow.length)];}refreshLookLabels();saveActive();sfx.pick();});
+// ===== VITRINE (tela de roupa estilo The Sims) =====
+let vitrineCat='hair';
+const VCAT_LABELS={hair:'Cabelo',outfit:'Roupa',shoes:'Sapato',skin:'Pele',acc:'Detalhe'};
+
+function buildVitrine(){
+  const tabsEl=document.getElementById('vcatTabs');
+  if(!tabsEl)return;
+  tabsEl.innerHTML='';
+  for(const cat of ['hair','outfit','shoes','skin','acc']){
+    const btn=document.createElement('button');
+    btn.className='vcatTab'+(cat===vitrineCat?' active':'');
+    btn.textContent=VCAT_LABELS[cat];
+    btn.addEventListener('click',()=>{
+      vitrineCat=cat;
+      tabsEl.querySelectorAll('.vcatTab').forEach(t=>t.classList.toggle('active',t===btn));
+      buildVitrineGrid();sfx.pop();
+    });
+    tabsEl.appendChild(btn);
+  }
+  buildVitrineGrid();
+  updateCoinsHud();
+}
+
+function buildVitrineGrid(){
+  const grid=document.getElementById('vitrineGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+  const cat=vitrineCat;
+  LOOKS[cat].forEach((item,idx)=>{
+    const owned=isOwned(cat,item.id)||!!item.free;
+    const equipped=look[cat]===idx;
+    const card=document.createElement('div');
+    card.className='vitem'+(equipped?' vequipped':'');
+    const cv=document.createElement('canvas');
+    cv.width=Math.round(72*DPR);cv.height=Math.round(88*DPR);
+    cv.style.cssText='width:72px;height:88px;display:block;';
+    const nm=document.createElement('div');nm.className='vitem-name';nm.textContent=item.name;
+    const bdg=document.createElement('div');bdg.className='vitem-badge';
+    if(equipped){bdg.textContent='✓ Usando';bdg.style.color='#9b5de5';}
+    else if(owned){bdg.textContent='✓ Tenho';bdg.style.color='#43aa8b';}
+    else{bdg.textContent='🪙'+item.price;bdg.style.color=coins>=(item.price||0)?'#fb8500':'#bbb';}
+    card.append(cv,nm,bdg);
+    grid.appendChild(card);
+    const lk=lookIdsFromSlot(saves[activeSlot]);lk[cat]=item.id;
+    drawMiniMalu(cv,lk,0.52);
+    card.addEventListener('click',()=>{
+      initAudio();
+      if(owned){
+        look[cat]=idx;saveActive();sfx.pop();
+        grid.querySelectorAll('.vitem').forEach((c,i)=>{
+          const eq2=look[cat]===i;c.classList.toggle('vequipped',eq2);
+          const b=c.querySelector('.vitem-badge'),it2=LOOKS[cat][i],own2=isOwned(cat,it2.id)||!!it2.free;
+          if(eq2){b.textContent='✓ Usando';b.style.color='#9b5de5';}
+          else if(own2){b.textContent='✓ Tenho';b.style.color='#43aa8b';}
+          else{b.textContent='🪙'+it2.price;b.style.color=coins>=(it2.price||0)?'#fb8500':'#bbb';}
+        });
+      }else if(coins>=(item.price||0)){
+        buyItem(cat,idx);buildVitrineGrid();
+      }else{showMsg('Precisa de 🪙'+(item.price||'?')+'!');sfx.pop();}
+    });
+  });
+}
+
+document.getElementById('randomBtn').addEventListener('click',()=>{
+  initAudio();
+  for(const c of ['hair','outfit','shoes','acc']){
+    const avail=LOOKS[c].map((_,i)=>i).filter(i=>isOwned(c,LOOKS[c][i].id)||!!LOOKS[c][i].free);
+    if(avail.length)look[c]=avail[Math.floor(Math.random()*avail.length)];
+  }
+  buildVitrineGrid();saveActive();sfx.pick();
+});
 
 // ===== SELEÇÃO DE FASE =====
 function buildLevelGrid(){
@@ -870,8 +992,8 @@ function buildLevelGrid(){
 // ===== FLUXO =====
 const titleScreen=document.getElementById('titleScreen'),dressScreen=document.getElementById('dressScreen'),levelScreen=document.getElementById('levelScreen'),completeScreen=document.getElementById('completeScreen'),finalScreen=document.getElementById('finalScreen');
 const dressBtn=document.getElementById('dressBtn'),mapBtn=document.getElementById('mapBtn');
-const slotScreen=document.getElementById('slotScreen'),shopScreen=document.getElementById('shopScreen');
-const allScreens=[slotScreen,titleScreen,dressScreen,levelScreen,completeScreen,finalScreen,shopScreen];
+const slotScreen=document.getElementById('slotScreen');
+const allScreens=[slotScreen,titleScreen,dressScreen,levelScreen,completeScreen,finalScreen];
 function showOnly(scr){allScreens.forEach(s=>s.classList.remove('show'));if(scr)scr.classList.add('show');}
 
 // --- Slots de save ---
@@ -896,46 +1018,28 @@ function selectSlot(i){
   look.hair=sl.look.hair;look.outfit=sl.look.outfit;look.shoes=sl.look.shoes;look.skin=sl.look.skin;look.acc=sl.look.acc;
   coins=sl.coins;updateCoinsHud();
   for(let k=0;k<levelBest.length;k++){levelBest[k]=sl.levelBest[k];levelDone[k]=sl.levelDone[k];}
-  totalScore=0;started=false;persistSaves();refreshLookLabels();
+  totalScore=0;started=false;persistSaves();
   showOnly(titleScreen);sfx.star();
 }
 function goToSlots(){saveActive();started=false;paused=true;dressBtn.style.display='none';mapBtn.style.display='none';buildSlotGrid();showOnly(slotScreen);sfx.pop();}
 
 // --- Lojinha ---
-function openShop(){buildShop();updateCoinsHud();paused=true;showOnly(shopScreen);sfx.pop();}
-function buildShop(){
-  const list=document.getElementById('shopList');list.innerHTML='';
-  for(const [cat,label] of CATS){
-    LOOKS[cat].forEach((it,idx)=>{
-      if(it.free)return;
-      const owned=isOwned(cat,it.id),can=coins>=it.price;
-      const row=document.createElement('div');row.className='shopRow';
-      row.innerHTML=`<canvas class="shopCanvas" width="${Math.round(48*DPR)}" height="${Math.round(60*DPR)}" style="width:38px;height:48px"></canvas><div class="shopInfo"><b>${it.name}</b><span>${label}</span></div>`+(owned?`<span class="shopOwned">✓ já tem</span>`:`<button class="buyBtn" data-cat="${cat}" data-idx="${idx}" ${can?'':'disabled'}>🪙 ${it.price}</button>`);
-      list.appendChild(row);
-      const lk=lookIdsFromSlot(saves[activeSlot]);lk[cat]=it.id;
-      drawMiniMalu(row.querySelector('.shopCanvas'),lk,0.46);
-    });
-  }
-  list.querySelectorAll('.buyBtn').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.cat,+b.dataset.idx)));
-}
 function buyItem(cat,idx){
-  const it=LOOKS[cat][idx];if(isOwned(cat,it.id)||coins<it.price)return;
+  const it=LOOKS[cat][idx];if(isOwned(cat,it.id)||coins<(it.price||0))return;
   coins-=it.price;saves[activeSlot].owned[cat].push(it.id);look[cat]=idx;
-  updateCoinsHud();saveActive();refreshLookLabels();buildShop();
+  updateCoinsHud();saveActive();
   sfx.win();showMsg('Comprou: '+it.name+'! 🎉');
 }
 
 started=false;paused=false;resetWorld(0);buildSlotGrid();
 function startLevel(idx){resetWorld(idx);[titleScreen,dressScreen,levelScreen,completeScreen,finalScreen].forEach(s=>s.classList.remove('show'));dressBtn.style.display='block';mapBtn.style.display='block';started=true;paused=false;sfx.star();showMsg(LEVELS[idx].name+' 🎬');}
-document.getElementById('startBtn').addEventListener('click',()=>{initAudio();updateCoinsHud();titleScreen.classList.remove('show');dressScreen.classList.add('show');sfx.pop();});
+document.getElementById('startBtn').addEventListener('click',()=>{initAudio();updateCoinsHud();buildVitrine();titleScreen.classList.remove('show');dressScreen.classList.add('show');sfx.pop();});
 document.getElementById('playBtn').addEventListener('click',()=>{initAudio();dressScreen.classList.remove('show');if(started){paused=false;sfx.star();}else{buildLevelGrid();levelScreen.classList.add('show');sfx.pop();}});
-dressBtn.addEventListener('click',()=>{paused=true;updateCoinsHud();dressScreen.classList.add('show');sfx.pop();});
+dressBtn.addEventListener('click',()=>{paused=true;updateCoinsHud();buildVitrine();dressScreen.classList.add('show');sfx.pop();});
 mapBtn.addEventListener('click',()=>{paused=true;buildLevelGrid();levelScreen.classList.add('show');sfx.pop();});
 document.getElementById('nextLevelBtn').addEventListener('click',()=>{completeScreen.classList.remove('show');startLevel(Math.min(currentLevelIdx+1,LEVELS.length-1));});
 document.getElementById('mapFromComplete').addEventListener('click',()=>{completeScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');sfx.pop();});
 document.getElementById('restartAllBtn').addEventListener('click',()=>{totalScore=0;finalScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');});
-document.getElementById('shopBtn').addEventListener('click',openShop);
-document.getElementById('shopCloseBtn').addEventListener('click',()=>{updateCoinsHud();showOnly(dressScreen);sfx.pop();});
 document.getElementById('switchSlotBtn1').addEventListener('click',goToSlots);
 document.getElementById('switchSlotBtn2').addEventListener('click',goToSlots);
 
