@@ -319,6 +319,56 @@ function drawManu(g,t){
   g.strokeStyle='#c9ccd4';g.lineWidth=2.4;g.beginPath();g.arc(4,-20,7,Math.PI*0.1,Math.PI*0.9);g.stroke();
   g.restore();
 }
+// Manu correndo no mundo do jogo (patas alternando + cabeça balançando), independente da Malu
+function drawManuAnim(g,phase,moving){
+  const legAmt=moving?3.4:0.6;
+  const liftL=Math.max(0,Math.sin(phase))*legAmt, liftR=Math.max(0,Math.sin(phase+Math.PI))*legAmt;
+  const headBob=Math.sin(phase*2)*(moving?1.8:0.5);
+  const earL=Math.sin(phase+0.5)*(moving?0.22:0.06), earR=Math.sin(phase+0.5+Math.PI)*(moving?0.22:0.06);
+  const bodyTilt=moving?Math.sin(phase)*0.045:0;
+  g.save();
+  g.fillStyle='rgba(0,0,0,0.14)';g.beginPath();g.ellipse(0,2,17,3.6,0,0,Math.PI*2);g.fill();
+  g.rotate(bodyTilt);
+  // patas/skates (esquerda e direita, alternando)
+  for(const[fx,lift] of[[-9,liftL],[7,liftR]]){
+    g.save();g.translate(fx,-lift);
+    g.fillStyle='#dfe3ea';rrp(g,-4,3,9,4,2);g.fill();
+    g.fillStyle='#c3c8d2';rrp(g,-4,8,9,3,1.5);g.fill();
+    g.fillStyle='rgba(255,255,255,0.6)';rrp(g,-3,4,7,3,1.5);g.fill();
+    g.fillStyle='#ff9ecb';const wspin=phase*4;
+    g.save();g.translate(-2,8.5);g.rotate(wspin);g.beginPath();g.arc(0,0,1.7,0,Math.PI*2);g.fill();g.strokeStyle='#ffd1e8';g.lineWidth=0.6;g.beginPath();g.moveTo(-1.7,0);g.lineTo(1.7,0);g.moveTo(0,-1.7);g.lineTo(0,1.7);g.stroke();g.restore();
+    g.save();g.translate(3,8.5);g.rotate(-wspin);g.beginPath();g.arc(0,0,1.7,0,Math.PI*2);g.fill();g.strokeStyle='#ffd1e8';g.lineWidth=0.6;g.beginPath();g.moveTo(-1.7,0);g.lineTo(1.7,0);g.moveTo(0,-1.7);g.lineTo(0,1.7);g.stroke();g.restore();
+    g.fillStyle='#fff';g.beginPath();g.arc(0,0,4.5,0,Math.PI*2);g.fill();
+    g.restore();
+  }
+  // corpo
+  g.fillStyle='#ff9ecb';rrp(g,-11,-12,22,15,7);g.fill();g.fillStyle='#ff8fb8';rrp(g,-11,-12,22,4,3);g.fill();
+  g.fillStyle='#fff';g.beginPath();g.arc(0,-1,5,0,Math.PI*2);g.fill();
+  // cabeça (com balanço próprio)
+  g.save();g.translate(2,headBob);
+  g.fillStyle='#fff';g.beginPath();g.arc(0,-18,11,0,Math.PI*2);g.fill();
+  g.beginPath();g.arc(0,-27,6,0,Math.PI*2);g.arc(-6,-24,5,0,Math.PI*2);g.arc(6,-24,5,0,Math.PI*2);g.fill();
+  // orelhas com balanço
+  g.save();g.translate(-11,-17);g.rotate(0.25+earL);g.beginPath();g.ellipse(0,0,4.5,10,0,0,Math.PI*2);g.fill();g.restore();
+  g.save();g.translate(11,-17);g.rotate(-0.25+earR);g.beginPath();g.ellipse(0,0,4.5,10,0,0,Math.PI*2);g.fill();g.restore();
+  drawBow(g,-12,-24,0.62,'#ff7eb6');drawBow(g,12,-24,0.62,'#ff7eb6');
+  g.fillStyle='#fff';g.beginPath();g.arc(6,-16,5,0,Math.PI*2);g.fill();
+  g.fillStyle='#ff5da2';g.beginPath();g.ellipse(10,-16,2.4,2,0,0,Math.PI*2);g.fill();
+  g.fillStyle='#222';g.beginPath();g.arc(-1,-20,1.9,0,Math.PI*2);g.arc(5,-20,1.9,0,Math.PI*2);g.fill();
+  g.fillStyle='#fff';g.beginPath();g.arc(-0.4,-20.6,0.7,0,Math.PI*2);g.arc(5.6,-20.6,0.7,0,Math.PI*2);g.fill();
+  g.strokeStyle='#c9ccd4';g.lineWidth=2.4;g.beginPath();g.arc(2,-11,7,Math.PI*0.1,Math.PI*0.9);g.stroke();
+  g.restore();
+  g.restore();
+}
+function drawManuInGame(){
+  if(LOOKS.pet[look.pet||0].id!=='manu')return;
+  const gy=groundY();const groundTop=platformTopAt(manuX,24);
+  const sx=manuX-camX;if(sx<-60||sx>W+60)return;const sy=gy-groundTop;
+  const moving=Math.abs(player.vx)>0.3||Math.abs((player.x-manuDir*52)-manuX)>3;
+  ctx.save();ctx.translate(sx,sy);ctx.scale(manuDir,1);
+  drawManuAnim(ctx,manuPhase,moving);
+  ctx.restore();
+}
 function renderMalu(g,o){
   if(o.skin&&SKIN_TONES[o.skin]){SKIN=SKIN_TONES[o.skin][0];SKIN_SH=SKIN_TONES[o.skin][1];}
   const ls=o.legSwing||0,as_=o.armSwing||0,bob=o.bodyBob||0,pb=o.ponyB||0,t=o.t||0;
@@ -595,6 +645,7 @@ let WORLD_END=2600,currentLevel=LEVELS[0],currentLevelIdx=0,totalScore=0;
 const levelBest=Array(NUM_LEVELS).fill(0),levelDone=Array(NUM_LEVELS).fill(false);
 let balls,targets,stars,badges,letters,wordDone,wordSpoken,particles,player,camX,score,started,paused,levelWon;
 let enemies=[],spikes=[],pits=[],hearts=3,invuln=0;
+let manuX=0,manuPhase=0,manuDir=1;
 // ===== CÂMERA VIVA (follow no pulo + tremor nos impactos) =====
 let camYd=0,shakeMag=0,shakeX=0,shakeY=0,birds=[],birdTimer=3;
 function addShake(m){shakeMag=Math.min(14,shakeMag+m);}
@@ -614,6 +665,7 @@ function resetWorld(idx){
   wordDone=currentLevel.word?currentLevel.word.split('').map(()=>false):[];wordSpoken=false;buildWordTrack();
   particles=[];initAmbient();
   player={x:60,y:0,w:44,h:64,vx:0,vy:0,facing:1,onGround:true,wasOnGround:true,coyote:0,jumpHeld:0,holding:null,anim:0,squash:0,stepT:0,throwT:0,grabT:0,fallV:0};
+  manuX=player.x-52;manuPhase=0;manuDir=1;
   const hz=HAZARDS[idx]||{};
   enemies=(hz.enemies||[]).map(e=>({x:e.x,x0:e.x0,x1:e.x1,spd:e.spd,c:e.c,dir:1,dead:false,crab:e.crab,lady:e.lady,bat:e.bat,t:Math.random()*6}));
   spikes=(hz.spikes||[]).slice();pits=(hz.pits||[]).slice();
@@ -716,6 +768,14 @@ function update(dt){
   player.anim+=dt*(Math.abs(player.vx)>0.3?9:2);
   const targetCam=player.x-W*0.42+player.facing*70;
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
+  // Manu corre atrás da Malu, sempre à mesma distância
+  if(LOOKS.pet[look.pet||0].id==='manu'){
+    const behind=52;const targetManuX=player.x-behind*player.facing;
+    manuX+=(targetManuX-manuX)*Math.min(1,dt*8);
+    const manuMoving=Math.abs(player.vx)>0.3||Math.abs(targetManuX-manuX)>3;
+    manuPhase+=dt*(manuMoving?9.5:1.6);
+    manuDir=player.facing;
+  }
   if(player.holding!==null){const b=balls[player.holding];b.x=player.x+player.w/2+player.facing*26;b.height=player.y+38+Math.sin(player.anim*1.5)*2;}
   for(const b of balls){
     if(!b.thrown||b.settled||b.gone)continue;
@@ -1192,7 +1252,7 @@ function drawMaluInGame(){
   ctx.rotate(lean*player.facing);
   ctx.scale(player.facing*(1+sq*0.5),1-sq*0.5);
   const rideId=LOOKS.ride[look.ride||0].id,wheeled=(rideId==='patinete'||rideId==='bike'||rideId==='ebike');
-  renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,pet:LOOKS.pet[look.pet||0].id,
+  renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,
     legSwing:wheeled?0:(walking?Math.sin(t)*7:(airborne?(rising?3:7):0)),
     armF,armB,
     bodyBob:walking?Math.abs(Math.sin(t))*1.5:(idle?breath:(airborne?(rising?-3:1):0)),
@@ -1299,7 +1359,7 @@ function draw(){
   else if(th==='noite'){drawNightSky();drawMoon();drawNoiteDecor();drawNightGround();}
   else if(th==='condominio'){drawCondominioDecor();}
   else{drawSkyRich('niteroi');drawSunGlow();drawLightRays();drawClouds(0.85);drawDistantRange('#a9cfe0');drawBirds();drawNiteroiDecor();drawSand();}
-  drawPlatforms();drawPits();drawSpikes();drawTargets();drawStars();drawBadges();drawLetters();drawEnemies();drawBalls();drawFlag();drawMaluInGame();drawParticles();drawAmbient();
+  drawPlatforms();drawPits();drawSpikes();drawTargets();drawStars();drawBadges();drawLetters();drawEnemies();drawBalls();drawFlag();drawManuInGame();drawMaluInGame();drawParticles();drawAmbient();
   ctx.restore();
   drawPostFX();
 }
