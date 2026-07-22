@@ -694,6 +694,7 @@ function drawFlyers(){
 }
 // ===== CÂMERA VIVA (follow no pulo + tremor nos impactos) =====
 let camYd=0,shakeMag=0,shakeX=0,shakeY=0,birds=[],birdTimer=3;
+let camZoom=1,camZoomPulse=0,camDip=0,camDipV=0;
 function addShake(m){shakeMag=Math.min(14,shakeMag+m);}
 // tween de números do HUD (sobem suavemente)
 let shownScore=0,shownCoins=0;
@@ -719,6 +720,7 @@ function resetWorld(idx){
   spikes=(hz.spikes||[]).slice();pits=(hz.pits||[]).slice();
   hearts=3;invuln=0;updateHeartsHud();
   camX=0;score=0;levelWon=false;shownScore=0;camYd=0;shakeMag=0;shakeX=0;shakeY=0;birds=[];birdTimer=2;
+  camZoom=1;camZoomPulse=0;camDip=0;camDipV=0;
   scoreEl.textContent='0';updateTargetsHud();
 }
 const scoreEl=document.getElementById('score'),targetsLeftEl=document.getElementById('targetsLeft'),heartsEl=document.getElementById('heartsPill');
@@ -810,7 +812,7 @@ function update(dt){
   if(player.vy<=0&&player.y>=gLevel&&ny<=gLevel){ny=gLevel;player.vy=0;player.onGround=true;}
   else if(ny<=0&&!overPit){ny=0;player.vy=0;player.onGround=true;}
   else player.onGround=false;
-  if(player.onGround&&!player.wasOnGround){const impact=Math.min(1,(player.fallV||0)/13);player.squash=0.25+impact*0.35;sfx.land();addShake(2+impact*5);burst(nx+player.w/2,ny+2,'#e9f5dc',7+impact*8,2+impact*2);burst(nx+player.w/2,ny+2,'#ffffff',4,1.5);}
+  if(player.onGround&&!player.wasOnGround){const impact=Math.min(1,(player.fallV||0)/13);player.squash=0.25+impact*0.35;sfx.land();addShake(2+impact*5);camDipV-=(1.5+impact*4.5);burst(nx+player.w/2,ny+2,'#e9f5dc',7+impact*8,2+impact*2);burst(nx+player.w/2,ny+2,'#ffffff',4,1.5);}
   player.fallV=Math.max(0,-player.vy);
   player.squash*=0.85;
   player.x=nx;player.y=ny;
@@ -842,7 +844,7 @@ function update(dt){
   player.lookXs+=(player.lookX-player.lookXs)*0.1;
   player.lookYs+=(player.lookY-player.lookYs)*0.1;
   player.anim+=dt*(Math.abs(player.vx)>0.3?9:2);
-  const targetCam=player.x-W*0.42+player.facing*70;
+  const targetCam=player.x-W*0.42+player.facing*(70+Math.min(38,Math.abs(player.vx)*9));
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
   // Manu corre atrás da Malu, sempre à mesma distância — com física própria (pula degraus e buracos)
   if(LOOKS.pet[look.pet||0].id==='manu'){
@@ -875,7 +877,7 @@ function update(dt){
     b.x+=b.vx;b.height+=b.vy;b.vy-=GRAVITY*0.75;b.vx*=0.997;
     const bg=platformTopAt(b.x-b.r,b.r*2);
     if(b.height<=bg){b.height=bg;if(Math.abs(b.vy)>1.6){b.vy=-b.vy*0.5;b.vx*=0.7;sfx.bounce();}else{b.settled=true;b.vy=0;b.vx=0;}}
-    for(const tg of targets){if(tg.hit)continue;const tTop=platformTopAt(tg.x,tg.w);if(b.x+b.r>tg.x&&b.x-b.r<tg.x+tg.w&&b.height<tTop+tg.h&&b.height+b.r>tTop){tg.hit=true;tg.popT=1;updateTargetsHud();sfx.hit();addShake(3);burst(tg.x+tg.w/2,tTop+tg.h/2,tg.color,14,5);magicBurst(tg.x+tg.w/2,tTop+tg.h/2,[tg.color,'#ffd166','#ffffff'],14);showMsg('Acertou! +10 ⭐');b.vx*=0.3;
+    for(const tg of targets){if(tg.hit)continue;const tTop=platformTopAt(tg.x,tg.w);if(b.x+b.r>tg.x&&b.x-b.r<tg.x+tg.w&&b.height<tTop+tg.h&&b.height+b.r>tTop){tg.hit=true;tg.popT=1;updateTargetsHud();sfx.hit();addShake(3);burst(tg.x+tg.w/2,tTop+tg.h/2,tg.color,14,5);magicBurst(tg.x+tg.w/2,tTop+tg.h/2,[tg.color,'#ffd166','#ffffff'],14);showMsg('Acertou! +10 ⭐');b.vx*=0.3;camZoomPulse=Math.max(camZoomPulse,0.01);
       spawnFlyer('coin',tg.x+tg.w/2,tTop+tg.h/2,{amount:2,hold:0.12,dur:0.5,size:8,color:'#ffd166'});
       spawnFlyer('star',tg.x+tg.w/2,tTop+tg.h/2+8,{scoreAmt:10,hold:0.18,dur:0.55,size:10,color:'#ffd166'});
       if(Math.random()<0.3)randomReact();
@@ -883,12 +885,12 @@ function update(dt){
     for(const e of enemies){if(e.dead)continue;const eh=platformTopAt(e.x,20);if(Math.abs(b.x-e.x)<20&&b.height<eh+30&&b.height+b.r>eh-6){e.dead=true;score+=15;scoreEl.textContent=score;addCoins(3);sfx.hit();addShake(2);magicBurst(e.x,eh+16,[e.c,'#fff','#ffd166'],14);showMsg('Acertou o bichinho! +15 ⭐');b.vx*=0.3;}}
     if(b.x<-60||b.x>WORLD_END+60)b.gone=true;
   }
-  for(const s of stars){if(s.taken)continue;s.t+=dt*3;const sy=s.h+Math.sin(s.t)*6;if(Math.abs(s.x-(player.x+player.w/2))<30&&Math.abs(sy-(player.y+35))<40){s.taken=true;sfx.star();magicBurst(s.x,sy,['#ffd166','#fff3c4','#ffffff'],14);showMsg('+5 ⭐ +1 🪙');
+  for(const s of stars){if(s.taken)continue;s.t+=dt*3;const sy=s.h+Math.sin(s.t)*6;if(Math.abs(s.x-(player.x+player.w/2))<30&&Math.abs(sy-(player.y+35))<40){s.taken=true;sfx.star();magicBurst(s.x,sy,['#ffd166','#fff3c4','#ffffff'],14);showMsg('+5 ⭐ +1 🪙');camZoomPulse=Math.max(camZoomPulse,0.006);
     spawnFlyer('coin',s.x,sy,{amount:1,hold:0.06,dur:0.38,size:7,color:'#ffd166'});
     spawnFlyer('star',s.x,sy+6,{scoreAmt:5,hold:0.08,dur:0.4,size:8,color:'#ffd166'});
   }}
   for(const b of badges){if(b.taken)continue;if(Math.abs(b.x-(player.x+player.w/2))<24&&Math.abs(b.h-(player.y+35))<32){b.taken=true;sfx.hit();sfx.star();addShake(5);magicBurst(b.x,b.h,['#f15bb5','#ffd166','#9b5de5','#ffffff'],24);showMsg('Insígnia mágica! ✨ +5 🪙');
-    flashA=0.4;triggerReact('twirl',0.75);
+    flashA=0.4;triggerReact('twirl',0.75);camZoomPulse=Math.max(camZoomPulse,0.022);
     spawnFlyer('coin',b.x,b.h,{amount:5,hold:0.3,dur:0.65,size:13,color:'#f15bb5'});
     spawnFlyer('star',b.x,b.h+10,{scoreAmt:20,hold:0.36,dur:0.7,size:15,color:'#ffd166'});
   }}
@@ -920,7 +922,7 @@ function onLevelComplete(){
   const badgesGot=badges.filter(b=>b.taken).length;
   const coinBonus=10+badgesGot*5;
   addCoins(coinBonus);saveActive();
-  triggerReact('twirl',0.8);flashA=0.3;
+  triggerReact('twirl',0.8);flashA=0.3;camZoomPulse=Math.max(camZoomPulse,0.032);
   const showerN=3+badgesGot*2;
   for(let i=0;i<showerN;i++){spawnFlyer('coin',player.x+player.w/2+(Math.random()-0.5)*30,player.y+40+Math.random()*20,{amount:0,hold:0.08*i,dur:0.5,size:9,color:'#ffd166'});}
   const faces=['😢','🙂','😄','🤩'];
@@ -1474,7 +1476,8 @@ function drawAmbient(){if(!ambientCfg||!ambient.length)return;const sh=ambientCf
 function draw(){
   const th=currentLevel.theme;
   ctx.save();
-  ctx.translate(Math.round(shakeX),Math.round(camYd+shakeY));
+  ctx.translate(W/2,H/2);ctx.scale(camZoom,camZoom);ctx.translate(-W/2,-H/2);
+  ctx.translate(Math.round(shakeX),Math.round(camYd+shakeY+camDip));
   drawBackdrop(th);
   if(th==='campo'){drawSkyRich('campo');drawSunGlow();drawLightRays();drawDistantRange('#b6d9bd');drawClouds();drawBirds();drawCampoDecor();drawGround('#9ccc7f','#7fb069','#b5dc9a');drawGrassTufts();}
   else if(th==='ph'){drawSkyRich('ph');drawSunGlow();drawLightRays();drawClouds(0.8);drawPHDecor();drawCourt();}
@@ -1668,6 +1671,11 @@ function loop(now){
   camYd+=(camTarget-camYd)*0.15;
   shakeMag*=0.86;if(shakeMag<0.25)shakeMag=0;
   shakeX=(Math.random()*2-1)*shakeMag;shakeY=(Math.random()*2-1)*shakeMag;
+  // câmera participa: respiração contínua sutil + zoom nas coletas + mergulho no pouso
+  camZoomPulse*=0.88;if(camZoomPulse<0.0003)camZoomPulse=0;
+  const breathe=Math.sin(now/2200)*0.0035;
+  camZoom=1+breathe+camZoomPulse;
+  camDipV+=(0-camDip)*0.34-camDipV*0.3;camDip+=camDipV;
   // números do HUD sobem suavemente
   tweenHud();
   draw();
