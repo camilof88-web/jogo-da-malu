@@ -320,14 +320,14 @@ function drawManu(g,t){
   g.restore();
 }
 // Manu correndo no mundo do jogo (patas alternando + cabeça balançando), independente da Malu
-function drawManuAnim(g,phase,moving){
+function drawManuAnim(g,phase,moving,airborne){
   const legAmt=moving?3.4:0.6;
-  const liftL=Math.max(0,Math.sin(phase))*legAmt, liftR=Math.max(0,Math.sin(phase+Math.PI))*legAmt;
+  let liftL=Math.max(0,Math.sin(phase))*legAmt, liftR=Math.max(0,Math.sin(phase+Math.PI))*legAmt;
+  if(airborne){liftL=2.6;liftR=2.6;}
   const headBob=Math.sin(phase*2)*(moving?1.8:0.5);
   const earL=Math.sin(phase+0.5)*(moving?0.22:0.06), earR=Math.sin(phase+0.5+Math.PI)*(moving?0.22:0.06);
   const bodyTilt=moving?Math.sin(phase)*0.045:0;
   g.save();
-  g.fillStyle='rgba(0,0,0,0.14)';g.beginPath();g.ellipse(0,2,17,3.6,0,0,Math.PI*2);g.fill();
   g.rotate(bodyTilt);
   // patas/skates (esquerda e direita, alternando)
   for(const[fx,lift] of[[-9,liftL],[7,liftR]]){
@@ -362,11 +362,13 @@ function drawManuAnim(g,phase,moving){
 }
 function drawManuInGame(){
   if(LOOKS.pet[look.pet||0].id!=='manu')return;
-  const gy=groundY();const groundTop=platformTopAt(manuX,24);
-  const sx=manuX-camX;if(sx<-60||sx>W+60)return;const sy=gy-groundTop;
-  const moving=Math.abs(player.vx)>0.3||Math.abs((player.x-manuDir*52)-manuX)>3;
+  const gy=groundY();
+  const sx=manuX-camX;if(sx<-60||sx>W+60)return;const sy=gy-manuY;
+  const moving=Math.abs(player.vx)>0.3||Math.abs((player.x-manuDir*52)-manuX)>3||!manuOnGround;
+  const shH=Math.max(0.3,1-Math.max(0,manuY)/180);
+  ctx.fillStyle=`rgba(0,0,0,${0.12*shH})`;ctx.beginPath();ctx.ellipse(sx,gy-(pitAtPoint(manuX)?0:platformTopAt(manuX,26))+2,15*shH+5,4,0,0,Math.PI*2);ctx.fill();
   ctx.save();ctx.translate(sx,sy);ctx.scale(manuDir,1);
-  drawManuAnim(ctx,manuPhase,moving);
+  drawManuAnim(ctx,manuPhase,moving,!manuOnGround);
   ctx.restore();
 }
 function renderMalu(g,o){
@@ -645,7 +647,7 @@ let WORLD_END=2600,currentLevel=LEVELS[0],currentLevelIdx=0,totalScore=0;
 const levelBest=Array(NUM_LEVELS).fill(0),levelDone=Array(NUM_LEVELS).fill(false);
 let balls,targets,stars,badges,letters,wordDone,wordSpoken,particles,player,camX,score,started,paused,levelWon;
 let enemies=[],spikes=[],pits=[],hearts=3,invuln=0;
-let manuX=0,manuPhase=0,manuDir=1;
+let manuX=0,manuPhase=0,manuDir=1,manuY=0,manuVY=0,manuOnGround=true;
 // ===== CÂMERA VIVA (follow no pulo + tremor nos impactos) =====
 let camYd=0,shakeMag=0,shakeX=0,shakeY=0,birds=[],birdTimer=3;
 function addShake(m){shakeMag=Math.min(14,shakeMag+m);}
@@ -665,7 +667,7 @@ function resetWorld(idx){
   wordDone=currentLevel.word?currentLevel.word.split('').map(()=>false):[];wordSpoken=false;buildWordTrack();
   particles=[];initAmbient();
   player={x:60,y:0,w:44,h:64,vx:0,vy:0,facing:1,onGround:true,wasOnGround:true,coyote:0,jumpHeld:0,holding:null,anim:0,squash:0,stepT:0,throwT:0,grabT:0,fallV:0};
-  manuX=player.x-52;manuPhase=0;manuDir=1;
+  manuX=player.x-52;manuPhase=0;manuDir=1;manuY=0;manuVY=0;manuOnGround=true;
   const hz=HAZARDS[idx]||{};
   enemies=(hz.enemies||[]).map(e=>({x:e.x,x0:e.x0,x1:e.x1,spd:e.spd,c:e.c,dir:1,dead:false,crab:e.crab,lady:e.lady,bat:e.bat,t:Math.random()*6}));
   spikes=(hz.spikes||[]).slice();pits=(hz.pits||[]).slice();
@@ -677,6 +679,7 @@ const scoreEl=document.getElementById('score'),targetsLeftEl=document.getElement
 function updateTargetsHud(){targetsLeftEl.textContent=targets.filter(t=>!t.hit).length;}
 function updateHeartsHud(){if(heartsEl)heartsEl.textContent='❤️'.repeat(Math.max(0,hearts))+'🤍'.repeat(Math.max(0,3-hearts));}
 function inPit(x){const cx=x+player.w/2;for(const p of pits)if(cx>p.x1&&cx<p.x2)return true;return false;}
+function pitAtPoint(cx){for(const p of pits)if(cx>p.x1&&cx<p.x2)return true;return false;}
 function hurtMalu(){
   if(invuln>0||levelWon||!started||paused)return;
   hearts--;updateHeartsHud();addShake(7);sfx.land();burst(player.x+player.w/2,player.y+22,'#ff6b6b',16,4);
@@ -768,13 +771,30 @@ function update(dt){
   player.anim+=dt*(Math.abs(player.vx)>0.3?9:2);
   const targetCam=player.x-W*0.42+player.facing*70;
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
-  // Manu corre atrás da Malu, sempre à mesma distância
+  // Manu corre atrás da Malu, sempre à mesma distância — com física própria (pula degraus e buracos)
   if(LOOKS.pet[look.pet||0].id==='manu'){
-    const behind=52;const targetManuX=player.x-behind*player.facing;
+    const behind=52;let targetManuX=player.x-behind*player.facing;
+    if(pitAtPoint(targetManuX)){const pp=pits.find(p=>targetManuX>p.x1&&targetManuX<p.x2);if(pp)targetManuX=(targetManuX-pp.x1<pp.x2-targetManuX)?pp.x1-10:pp.x2+10;}
     manuX+=(targetManuX-manuX)*Math.min(1,dt*8);
-    const manuMoving=Math.abs(player.vx)>0.3||Math.abs(targetManuX-manuX)>3;
-    manuPhase+=dt*(manuMoving?9.5:1.6);
     manuDir=player.facing;
+    // IA: olha um pouco à frente (na direção que ela anda) pra decidir se precisa pular
+    const lookDir=(targetManuX>=manuX)?1:-1;
+    const aheadX=manuX+lookDir*34;
+    const hereTop=pitAtPoint(manuX)?-9999:platformTopAt(manuX,26);
+    const aheadTop=pitAtPoint(aheadX)?-9999:platformTopAt(aheadX,26);
+    manuVY-=GRAVITY;
+    let nyM=manuY+manuVY;
+    if(manuOnGround&&(aheadTop>hereTop+10||aheadTop<=-9000)){
+      const gap=aheadTop<=-9000?55:Math.max(18,aheadTop-hereTop+16); // buraco usa salto padrão; degrau usa altura real necessária
+      manuVY=Math.min(23,Math.sqrt(2*GRAVITY*gap)+3);
+      manuOnGround=false;nyM=manuY+manuVY;
+    }
+    if(manuVY<=0&&nyM<=hereTop&&hereTop>-9000){nyM=hereTop;manuVY=0;manuOnGround=true;}
+    else manuOnGround=false;
+    if(nyM<-260){nyM=hereTop>-9000?hereTop:0;manuVY=0;manuOnGround=true;} // rede de segurança, nunca some de vez
+    manuY=nyM;
+    const manuMoving=Math.abs(player.vx)>0.3||Math.abs(targetManuX-manuX)>3||!manuOnGround;
+    manuPhase+=dt*(manuMoving?9.5:1.6);
   }
   if(player.holding!==null){const b=balls[player.holding];b.x=player.x+player.w/2+player.facing*26;b.height=player.y+38+Math.sin(player.anim*1.5)*2;}
   for(const b of balls){
