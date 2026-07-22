@@ -655,6 +655,14 @@ let WORLD_END=2600,currentLevel=LEVELS[0],currentLevelIdx=0,totalScore=0;
 const levelBest=Array(NUM_LEVELS).fill(0),levelDone=Array(NUM_LEVELS).fill(false);
 let balls,targets,stars,badges,letters,wordDone,wordSpoken,particles,player,camX,score,started,paused,levelWon;
 let enemies=[],spikes=[],pits=[],hearts=3,invuln=0;
+let checkpointX=60,checkpointActive=false;
+const CHECKPOINTS={0:1070,1:1250,2:1215,3:1500,4:1335,5:1500,6:1450};
+function buildTrailStars(pitsList,spikesList){
+  const extra=[];
+  for(const p of pitsList){for(let i=1;i<=5;i++){const tt=i/6,x=p.x1+(p.x2-p.x1)*tt,bulge=4*tt*(1-tt)*70;extra.push({x,h:bulge+14,taken:false,t:Math.random()*6});}}
+  for(const s of spikesList){const th=platformTopAt(s.x,26);for(let i=1;i<=3;i++){const tt=i/4,x=s.x-40+80*tt,bulge=4*tt*(1-tt)*55;extra.push({x,h:th+18+bulge,taken:false,t:Math.random()*6});}}
+  return extra;
+}
 let manuX=0,manuPhase=0,manuDir=1,manuY=0,manuVY=0,manuOnGround=true;
 let flyers=[],flashA=0;
 function triggerReact(kind,dur){player.reactKind=kind;player.reactDur=dur||0.55;player.reactT=player.reactDur;}
@@ -718,6 +726,8 @@ function resetWorld(idx){
   const hz=HAZARDS[idx]||{};
   enemies=(hz.enemies||[]).map(e=>({x:e.x,x0:e.x0,x1:e.x1,spd:e.spd,c:e.c,dir:1,dead:false,crab:e.crab,lady:e.lady,bat:e.bat,t:Math.random()*6}));
   spikes=(hz.spikes||[]).slice();pits=(hz.pits||[]).slice();
+  stars=stars.concat(buildTrailStars(pits,spikes));
+  checkpointX=CHECKPOINTS[idx]||Math.round(currentLevel.worldEnd*0.5);checkpointActive=false;
   hearts=3;invuln=0;updateHeartsHud();
   camX=0;score=0;levelWon=false;shownScore=0;camYd=0;shakeMag=0;shakeX=0;shakeY=0;birds=[];birdTimer=2;
   camZoom=1;camZoomPulse=0;camDip=0;camDipV=0;
@@ -728,11 +738,20 @@ function updateTargetsHud(){targetsLeftEl.textContent=targets.filter(t=>!t.hit).
 function updateHeartsHud(){if(heartsEl)heartsEl.textContent='❤️'.repeat(Math.max(0,hearts))+'🤍'.repeat(Math.max(0,3-hearts));}
 function inPit(x){const cx=x+player.w/2;for(const p of pits)if(cx>p.x1&&cx<p.x2)return true;return false;}
 function pitAtPoint(cx){for(const p of pits)if(cx>p.x1&&cx<p.x2)return true;return false;}
+function respawnAtCheckpoint(){
+  const cx=checkpointActive?checkpointX:60;const cy=platformTopAt(cx,player.w*0.7);
+  player.x=cx;player.y=cy;player.vx=0;player.vy=0;player.onGround=true;player.holding=null;
+  camX=Math.max(0,Math.min(cx-W*0.42,WORLD_END-W));camYd=0;shakeMag=0;camDip=0;camDipV=0;
+  manuX=cx-52;manuY=cy;manuVY=0;manuOnGround=true;
+}
 function hurtMalu(){
   if(invuln>0||levelWon||!started||paused)return;
   hearts--;updateHeartsHud();addShake(7);sfx.land();burst(player.x+player.w/2,player.y+22,'#ff6b6b',16,4);
-  if(hearts<=0){showMsg('Ops! Vamos de novo 💗');paused=true;setTimeout(()=>{resetWorld(currentLevelIdx);paused=false;},950);}
-  else{invuln=1.6;showMsg('Ai! -1 ❤️');if(player.holding!==null){const hb=balls[player.holding];hb.held=false;hb.thrown=false;hb.settled=true;}player.x=60;player.y=0;player.vx=0;player.vy=0;player.holding=null;camX=0;}
+  if(player.holding!==null){const hb=balls[player.holding];hb.held=false;hb.thrown=false;hb.settled=true;}
+  if(hearts<=0){
+    showMsg(checkpointActive?'Ops! Volta pro ponto salvo 💗':'Ops! Vamos de novo 💗');paused=true;
+    setTimeout(()=>{if(checkpointActive){hearts=3;updateHeartsHud();respawnAtCheckpoint();}else{resetWorld(currentLevelIdx);}paused=false;},950);
+  }else{invuln=1.6;showMsg('Ai! -1 ❤️');respawnAtCheckpoint();}
 }
 
 // ===== LEITURA (voz em português + palavras) =====
@@ -911,6 +930,9 @@ function update(dt){
   }
   // espinhos parados
   for(const s of spikes){const top=platformTopAt(s.x,26);if(!levelWon&&Math.abs((player.x+player.w/2)-s.x)<18&&player.y<top+18&&player.y>top-40)hurtMalu();}
+  if(!checkpointActive&&player.onGround&&Math.abs((player.x+player.w/2)-checkpointX)<28){
+    checkpointActive=true;sfx.star();magicBurst(checkpointX,platformTopAt(checkpointX,20)+30,['#43aa8b','#ffd166','#ffffff'],18);showMsg('Ponto salvo! 🚩');camZoomPulse=Math.max(camZoomPulse,0.012);
+  }
   for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.h+=p.vy;p.vy-=0.25;if(p.rot!==undefined)p.rot+=p.vr||0.2;p.life-=dt*1.6;if(p.life<=0||p.h<0)particles.splice(i,1);}
   for(const tg of targets)if(tg.popT>0)tg.popT-=dt*2;
   if(!levelWon&&player.x>WORLD_END-90){levelWon=true;sfx.win();onLevelComplete();}
@@ -1325,6 +1347,15 @@ function drawPits(){const gy=groundY();for(const p of pits){const x1=p.x1-camX,x
   const g=ctx.createLinearGradient(0,gy,0,H);g.addColorStop(0,'rgba(15,10,25,0.5)');g.addColorStop(1,'rgba(15,10,25,0.85)');ctx.fillStyle=g;ctx.fillRect(x1,gy,x2-x1,H-gy);
   ctx.fillStyle='rgba(0,0,0,0.32)';ctx.fillRect(x1,gy,8,H-gy);ctx.fillRect(x2-8,gy,8,H-gy);
   ctx.fillStyle='#7a5230';ctx.fillRect(x1-4,gy-2,5,9);ctx.fillRect(x2-1,gy-2,5,9);}}
+function drawCheckpointFlag(){
+  const gy=groundY();const sx=checkpointX-camX;if(sx<-40||sx>W+40)return;const top=platformTopAt(checkpointX,20);const base=gy-top;
+  const active=checkpointActive,wave=Math.sin(Date.now()/(active?220:600))*(active?4:1.5);
+  ctx.fillStyle=active?'#6b4a2a':'#8a8a8a';rrp(ctx,sx-3,base-86,6,86,2);ctx.fill();
+  if(active){ctx.save();ctx.globalCompositeOperation='lighter';const g=ctx.createRadialGradient(sx,base-70,4,sx,base-70,40);g.addColorStop(0,'rgba(120,255,180,0.35)');g.addColorStop(1,'rgba(120,255,180,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,base-70,40,0,Math.PI*2);ctx.fill();ctx.restore();}
+  ctx.fillStyle=active?'#43aa8b':'#b8b8b8';
+  ctx.beginPath();ctx.moveTo(sx+3,base-86);ctx.quadraticCurveTo(sx+22,base-80+wave,sx+40,base-74+wave);ctx.lineTo(sx+3,base-60);ctx.closePath();ctx.fill();
+  if(active){ctx.fillStyle='#ffd166';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('★',sx+20,base-74+wave*0.5);}
+}
 function drawSpikes(){const gy=groundY();for(const s of spikes){const top=platformTopAt(s.x,26);const sx=s.x-camX;if(sx<-30||sx>W+30)continue;const baseY=gy-top;
   ctx.fillStyle='#6b7078';rrp(ctx,sx-18,baseY-3,36,7,2);ctx.fill();
   for(let i=-1;i<=1;i++){const bx=sx+i*11;ctx.fillStyle='#9aa0a8';ctx.beginPath();ctx.moveTo(bx-6,baseY);ctx.lineTo(bx,baseY-20);ctx.lineTo(bx+6,baseY);ctx.closePath();ctx.fill();ctx.fillStyle='#c9ced4';ctx.beginPath();ctx.moveTo(bx-6,baseY);ctx.lineTo(bx-1,baseY-18);ctx.lineTo(bx-1,baseY);ctx.closePath();ctx.fill();}}}
@@ -1486,7 +1517,7 @@ function draw(){
   else if(th==='noite'){drawNightSky();drawMoon();drawNoiteDecor();drawNightGround();}
   else if(th==='condominio'){drawCondominioDecor();}
   else{drawSkyRich('niteroi');drawSunGlow();drawLightRays();drawClouds(0.85);drawDistantRange('#a9cfe0');drawBirds();drawNiteroiDecor();drawSand();}
-  drawPlatforms();drawPits();drawSpikes();drawTargets();drawStars();drawBadges();drawLetters();drawEnemies();drawBalls();drawFlag();drawManuInGame();drawMaluInGame();drawParticles();drawAmbient();
+  drawPlatforms();drawPits();drawSpikes();drawCheckpointFlag();drawTargets();drawStars();drawBadges();drawLetters();drawEnemies();drawBalls();drawFlag();drawManuInGame();drawMaluInGame();drawParticles();drawAmbient();
   ctx.restore();
   drawPostFX();
   drawFlyers();
