@@ -18,7 +18,7 @@
   body { font-family:'Trebuchet MS','Comic Sans MS',sans-serif; }
   #wrap { position:fixed; inset:0; }
   #game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
-  #hud { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:14px; display:flex; gap:8px; align-items:center; z-index:5; pointer-events:none; }
+  #hud { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:14px; right:168px; display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; z-index:5; pointer-events:none; }
   .pill { background:linear-gradient(180deg,rgba(255,255,255,0.96),rgba(245,238,255,0.9)); border-radius:999px; padding:7px 14px; font-weight:800; color:#5a3e85; font-size:15px; box-shadow:0 4px 12px rgba(80,40,120,0.22),inset 0 1px 0 rgba(255,255,255,0.9); }
   @keyframes bumpAnim { 0%{transform:scale(1)} 38%{transform:scale(1.2)} 100%{transform:scale(1)} }
   .pill.bump { animation:bumpAnim .34s cubic-bezier(.34,1.56,.64,1); }
@@ -273,7 +273,8 @@ const RIDE_RIG={
 function drawBow(g,cx,cy,scale=1,color='#f15bb5'){g.save();g.translate(cx,cy);g.scale(scale,scale);g.fillStyle=color;g.beginPath();g.moveTo(0,0);g.lineTo(-7,-5);g.lineTo(-7,3);g.closePath();g.fill();g.beginPath();g.moveTo(0,0);g.lineTo(7,-5);g.lineTo(7,3);g.closePath();g.fill();g.fillStyle=shade(color,-30);g.beginPath();g.arc(0,0,2.4,0,Math.PI*2);g.fill();g.restore();}
 
 function drawHelmet(g,hy,R,hlx,hly){
-  g.save();g.translate((hlx||0)*0.5,hy+(hly||0)*0.5);
+  const raise=R*1.15; // levanta o capacete pra sentar acima da testa, sem afundar nos olhos
+  g.save();g.translate((hlx||0)*0.5,hy-raise+(hly||0)*0.5);
   g.fillStyle='#ff6fae';g.beginPath();g.arc(0,0,R+3.5,Math.PI,Math.PI*2);g.fill();
   g.fillStyle='#ff8fc0';g.beginPath();g.arc(0,0,R+3.5,Math.PI*1.05,Math.PI*1.5);g.fill();
   g.strokeStyle='#ffd1e8';g.lineWidth=3.2;g.beginPath();g.arc(0,0,R+2,Math.PI*1.15,Math.PI*1.85);g.stroke();
@@ -292,19 +293,21 @@ function drawSkate(g,ax){
   g.fillStyle='#ff9ecb';for(let i=0;i<4;i++){g.beginPath();g.arc(ax-6+i*5,-0.5,2.4,0,Math.PI*2);g.fill();}
   g.fillStyle='#ffd1e8';for(let i=0;i<4;i++){g.beginPath();g.arc(ax-6.7+i*5,-1.2,0.9,0,Math.PI*2);g.fill();}
 }
-function drawRideBack(g,ride){
+function drawRideBack(g,ride,wheelSpin){
+  wheelSpin=wheelSpin||0;
   if(ride==='patinete'){
     const rig=RIDE_RIG.patinete,deckY=rig.deckY;
-    // rodinhas no chão (raio pequeno, tocando y=0)
-    for(const wx of[-14,20]){g.fillStyle='#333';g.beginPath();g.arc(wx,-6,6,0,Math.PI*2);g.fill();g.fillStyle='#ff9ecb';g.beginPath();g.arc(wx,-6,2.4,0,Math.PI*2);g.fill();}
+    // rodinhas no chão (raio pequeno, tocando y=0), com marca girando
+    for(const wx of[-14,20]){g.fillStyle='#333';g.beginPath();g.arc(wx,-6,6,0,Math.PI*2);g.fill();g.fillStyle='#ff9ecb';g.beginPath();g.arc(wx,-6,2.4,0,Math.PI*2);g.fill();
+      g.fillStyle='rgba(255,255,255,0.7)';g.beginPath();g.arc(wx+Math.cos(wheelSpin)*3.6,-6+Math.sin(wheelSpin)*3.6,1,0,Math.PI*2);g.fill();}
     // deck (plataforma onde os pés ficam)
     g.fillStyle='#ff5da2';rrp(g,-16,deckY-3,36,5,2);g.fill();g.fillStyle='#ff8fc0';rrp(g,-16,deckY-3,36,2,1);g.fill();
   }else{
     const rig=RIDE_RIG[ride],frame=rig.frame,wy=rig.wheelY,wr=rig.wheelR;
-    // rodas (tocam o chão em y=0)
+    // rodas (tocam o chão em y=0), raios giram de verdade com o movimento
     for(const wx of[rig.wheelBackX,rig.wheelFrontX]){
       g.strokeStyle='#333';g.lineWidth=3.4;g.beginPath();g.arc(wx,wy,wr,0,Math.PI*2);g.stroke();
-      g.strokeStyle='rgba(200,205,215,0.85)';g.lineWidth=1;for(let a=0;a<8;a++){const an=a/8*Math.PI*2;g.beginPath();g.moveTo(wx,wy);g.lineTo(wx+Math.cos(an)*(wr-2),wy+Math.sin(an)*(wr-2));g.stroke();}
+      g.strokeStyle='rgba(200,205,215,0.85)';g.lineWidth=1;for(let a=0;a<8;a++){const an=a/8*Math.PI*2+wheelSpin;g.beginPath();g.moveTo(wx,wy);g.lineTo(wx+Math.cos(an)*(wr-2),wy+Math.sin(an)*(wr-2));g.stroke();}
       g.fillStyle=frame;g.beginPath();g.arc(wx,wy,2.8,0,Math.PI*2);g.fill();
     }
     // quadro: eixo traseiro → selim → pedivela → eixo dianteiro
@@ -417,7 +420,7 @@ function renderMalu(g,o){
   if(o.pet==='manu')drawManu(g,t);
   const rideRig=RIDE_RIG[o.ride];
   const wheeledRig=(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike');
-  if(wheeledRig)drawRideBack(g,o.ride);
+  if(wheeledRig)drawRideBack(g,o.ride,o.wheelSpin);
   // braço de trás (ombro→cotovelo→mão, atrás do corpo) — mira no guidão quando há veículo com grip
   if(rideRig&&rideRig.gripL)drawArmTo(g,-9,-50-bob,rideRig.gripL.x,rideRig.gripL.y,sleeveB,SKIN_SH,false);
   else drawArm(g,-9,-50-bob,armB,sleeveB,SKIN_SH,false);
@@ -851,7 +854,7 @@ function burst(x,h,color,n=14,speed=4){for(let i=0;i<n;i++){const a=Math.random(
 function magicBurst(x,h,colors,n=16){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*4.5;particles.push({x,h,vx:Math.cos(a)*s,vy:Math.sin(a)*s+1.5,life:1,color:colors[i%colors.length],size:3+Math.random()*4,glow:true,star:Math.random()<0.55,rot:Math.random()*6,vr:(Math.random()-0.5)*0.6});}}
 function doThrow(){
   if(!started||paused||levelWon)return;
-  if(player.holding!==null){const b=balls[player.holding];b.held=false;b.thrown=true;b.settled=false;b.vx=player.facing*11+player.vx*0.7;b.vy=8.5;b.x=player.x+player.w/2+player.facing*30;b.height=player.y+42;player.holding=null;player.throwT=0.3;sfx.throw_();burst(b.x,b.height,'#ffffff',6,3);}
+  if(player.holding!==null){const b=balls[player.holding];b.held=false;b.thrown=true;b.settled=false;b.vx=player.facing*13.5+player.vx*0.7;b.vy=4.6;b.x=player.x+player.w/2+player.facing*30;b.height=player.y+42;player.holding=null;player.throwT=0.3;sfx.throw_();burst(b.x,b.height,'#ffffff',6,3);}
   else{let best=-1,bestD=72;for(let i=0;i<balls.length;i++){const b=balls[i];if(b.gone||b.held||(b.thrown&&!b.settled))continue;const d=Math.hypot(b.x-(player.x+player.w/2),(b.height||0)-player.y);if(d<bestD){bestD=d;best=i;}}if(best>=0){const b=balls[best];player.holding=best;b.held=true;b.thrown=false;b.settled=true;player.grabT=0.2;sfx.pick();burst(b.x,(b.height||0)+14,b.color,8,2.5);}}
 }
 // ===== UPDATE =====
@@ -1453,8 +1456,14 @@ function drawEnemies(){const gy=groundY();for(const e of enemies){if(e.dead)cont
   for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(sx+i*8,by-7);ctx.lineTo(sx+i*8+(i%2?wl:-wl),by);ctx.stroke();}
   if(e.bat){ctx.fillStyle=shade(e.c,25);const wf=Math.sin(t*12)*6;for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(sx,by-bh-2);ctx.quadraticCurveTo(sx+s*24,by-bh-10-wf,sx+s*26,by-bh+6);ctx.quadraticCurveTo(sx+s*16,by-bh+2,sx,by-bh-2);ctx.closePath();ctx.fill();}}
   if(e.crab){ctx.fillStyle=shade(e.c,-8);for(const s of[-1,1]){ctx.beginPath();ctx.ellipse(sx+s*19,by-bh+2,6,8,s*0.5,0,Math.PI*2);ctx.fill();}}
+  // halo pulsante pra se destacar do cenario (mais forte a noite)
+  const nightGlow=currentLevel.theme==='noite';const pulse=0.5+0.5*Math.sin(t*3);
+  ctx.save();ctx.globalCompositeOperation='lighter';const glow=ctx.createRadialGradient(sx,by-bh+2,4,sx,by-bh+2,26);
+  glow.addColorStop(0,`rgba(255,255,255,${(nightGlow?0.4:0.22)+pulse*0.15})`);glow.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(sx,by-bh+2,26,0,Math.PI*2);ctx.fill();ctx.restore();
   const bg=ctx.createRadialGradient(sx-4,by-bh-3,3,sx,by-bh+2,17);bg.addColorStop(0,shade(e.c,45));bg.addColorStop(1,e.c);ctx.fillStyle=bg;
   ctx.beginPath();ctx.ellipse(sx,by-bh+2,15,bh*0.95,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(sx,by-bh+2,15,bh*0.95,0,0,Math.PI*2);ctx.stroke();
   if(e.lady){ctx.strokeStyle=shade(e.c,-35);ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(sx,by-bh*1.9);ctx.lineTo(sx,by-1);ctx.stroke();ctx.fillStyle='#2a1a1a';[[-6,-bh],[6,-bh+3],[-3,-bh+9],[4,-bh+8]].forEach(([dx,dy])=>{ctx.beginPath();ctx.arc(sx+dx,by+dy,2.1,0,Math.PI*2);ctx.fill();});}
   ctx.strokeStyle=shade(e.c,-30);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(sx+dir*4,by-bh*1.7);ctx.lineTo(sx+dir*9,by-bh*2.05);ctx.stroke();ctx.fillStyle='#333';ctx.beginPath();ctx.arc(sx+dir*9,by-bh*2.1,1.7,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx+dir*4,by-bh+1,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#222';ctx.beginPath();ctx.arc(sx+dir*5,by-bh+1,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx+dir*5.7,by-bh+0.3,0.7,0,Math.PI*2);ctx.fill();}}
@@ -1501,7 +1510,7 @@ function drawMaluInGame(){
     bodyBob:bodyBobV,
     ponyB:walking?Math.sin(t-1)*3:(idle?Math.sin(tt*2-0.6)*1.4:(airborne?(rising?-5:4):0)),
     hairLagX:player.hairLagX,hairLagY:player.hairLagY,lookX:player.lookXs,lookY:player.lookYs,
-    pedalPhase:player.anim*0.9,
+    pedalPhase:player.anim*0.9,wheelSpin:player.anim*2.6,
     holding:player.holding!==null,blink:player.blinkV,t:tt});
   ctx.restore();
 }
@@ -1620,7 +1629,7 @@ function drawDressPreview(now){
   dctx.fillStyle='rgba(214,51,108,0.1)';dctx.beginPath();dctx.ellipse(100,218,56,10,0,0,Math.PI*2);dctx.fill();
   for(let i=0;i<6;i++){const a=t*0.7+i*1.05;dctx.fillStyle=`rgba(241,91,181,${0.25+0.2*Math.sin(t*2+i)})`;starPath(dctx,100+Math.cos(a)*78,110+Math.sin(a)*88,4,2);dctx.fill();}
   dctx.save();dctx.translate(100,214);dctx.scale(1.7,1.7);
-  renderMalu(dctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:LOOKS.ride[look.ride||0].id,pet:LOOKS.pet[look.pet||0].id,bodyBob:Math.sin(t*2.2)*1.2,ponyB:Math.sin(t*2.2-0.5)*1.5,blink:blinkNow(),t});
+  renderMalu(dctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:LOOKS.ride[look.ride||0].id,pet:LOOKS.pet[look.pet||0].id,bodyBob:Math.sin(t*2.2)*1.2,ponyB:Math.sin(t*2.2-0.5)*1.5,wheelSpin:t*2,blink:blinkNow(),t});
   dctx.restore();
 }
 // ===== VITRINE (tela de roupa estilo The Sims) =====
