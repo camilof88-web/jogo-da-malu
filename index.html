@@ -414,7 +414,7 @@ function renderMalu(g,o){
   if(o.outfit==='vermelha'){pc='#23232e';pcf='#2b2b38';}
   else if(o.outfit==='ph'){pc='#28579e';pcf='#3669b5';}
   else if(o.outfit==='flamengo'){pc='#171717';pcf='#212121';}
-  const hy=-71-bob,R=19;
+  const hy=-71-(o.headBob!==undefined?o.headBob:bob),R=19; // cabeça atrasa em relação ao corpo (overlapping action)
   const hlx=o.hairLagX||0,hly=o.hairLagY||0,lookX=o.lookX||0,lookY=o.lookY||0;
   g.lineCap='round';
   if(o.pet==='manu')drawManu(g,t);
@@ -775,7 +775,8 @@ function resetWorld(idx){
   wordDone=currentLevel.word?currentLevel.word.split('').map(()=>false):[];wordSpoken=false;buildWordTrack();
   particles=[];initAmbient();
   player={x:60,y:0,w:44,h:64,vx:0,vy:0,facing:1,onGround:true,wasOnGround:true,coyote:0,jumpHeld:0,holding:null,anim:0,squash:0,stepT:0,throwT:0,grabT:0,fallV:0,
-    hairLagX:0,hairLagY:0,leanS:0,leanV:0,idleT:0,idleAct:'',idleActT:0,lookX:0,lookY:0,lookXs:0,lookYs:0,blinkT:2,blinkV:1,dblink:0,reactT:0,reactKind:'',reactDur:0.55,comboCount:0,flutterT:0,flutterUsed:false};
+    hairLagX:0,hairLagY:0,leanS:0,leanV:0,idleT:0,idleAct:'',idleActT:0,lookX:0,lookY:0,lookXs:0,lookYs:0,blinkT:2,blinkV:1,dblink:0,reactT:0,reactKind:'',reactDur:0.55,comboCount:0,flutterT:0,flutterUsed:false,
+    jumpAnticipT:0,jumpQueued:false,headBob:0,headBobV:0,hipRock:0,hipRockV:0,animAmp:0,airStretch:0};
   manuX=player.x-52;manuPhase=0;manuDir=1;manuY=0;manuVY=0;manuOnGround=true;
   flyers=[];flashA=0;
   const hz=HAZARDS[idx]||{};
@@ -871,8 +872,13 @@ function update(dt){
   if(Math.abs(player.vx)<0.05)player.vx=0;
   if(player.onGround&&Math.abs(player.vx)>1.5){player.stepT-=dt;if(player.stepT<=0){sfx.step();player.stepT=0.22;}}
   if(player.onGround)player.coyote=0.12;else player.coyote-=dt;
-  if(jumpPressed&&player.coyote>0){player.vy=11.5;player.onGround=false;player.coyote=0;player.jumpHeld=0.22;player.squash=-0.25;player.flutterT=0;player.flutterUsed=false;sfx.jump();burst(player.x+player.w/2,4,'#ffffff',6,2);}
+  // antecipação: agacha um instante antes do salto de verdade (12 princípios — nunca pula "do nada")
+  if(jumpPressed&&player.coyote>0&&player.jumpAnticipT<=0&&!player.jumpQueued){player.jumpQueued=true;player.jumpAnticipT=0.055;player.coyote=0;player.squash=-0.34;}
   jumpPressed=false;
+  if(player.jumpQueued){
+    player.jumpAnticipT-=dt;
+    if(player.jumpAnticipT<=0){player.jumpQueued=false;player.vy=11.5;player.onGround=false;player.jumpHeld=0.22;player.squash=-0.22;player.flutterT=0;player.flutterUsed=false;sfx.jump();burst(player.x+player.w/2,4,'#ffffff',6,2);}
+  }
   if(keys.jump&&player.jumpHeld>0&&player.vy>0){player.vy+=0.32;player.jumpHeld-=dt;}
   if(!keys.jump)player.jumpHeld=0;
   // flutter jump (estilo Yoshi): segurar pular no ar, perto do topo/caindo, plana por um instante — 1x por salto
@@ -921,6 +927,22 @@ function update(dt){
   player.lookXs+=(player.lookX-player.lookXs)*0.1;
   player.lookYs+=(player.lookY-player.lookYs)*0.1;
   player.anim+=dt*(Math.abs(player.vx)>0.3?9:2);
+  // amplitude do ciclo de caminhada suavizada (smoothstep) — nunca troca de golpe idle<->andando
+  const moveT=Math.min(1,Math.abs(player.vx)/1.2);
+  const targetAmp=player.onGround?(moveT*moveT*(3-2*moveT)):0;
+  player.animAmp+=(targetAmp-player.animAmp)*0.18;
+  // quadril: leve balanço rotacional acompanhando o passo (rocking, não só bob vertical)
+  const targetHipRock=Math.sin(player.anim)*0.055*player.animAmp;
+  player.hipRockV+=(targetHipRock-player.hipRock)*0.4-player.hipRockV*0.3;player.hipRock+=player.hipRockV;
+  // cabeça atrasa em relação ao corpo (overlapping action / follow-through)
+  const ttNow=Date.now()/1000,isIdleNow=player.onGround&&Math.abs(player.vx)<0.4;
+  const walkBobTarget=Math.abs(Math.sin(player.anim))*1.5*player.animAmp;
+  const idleBreathTarget=isIdleNow?Math.sin(ttNow*2)*0.9*(1-player.animAmp):0;
+  const airBobTarget=!player.onGround?(player.vy>1?-3:1):0;
+  const targetHeadBob=player.onGround?(walkBobTarget+idleBreathTarget):airBobTarget;
+  player.headBobV+=(targetHeadBob-player.headBob)*0.24-player.headBobV*0.24;player.headBob+=player.headBobV;
+  // squash/stretch contínuo no ar, puxado pela velocidade vertical (além do squash de impacto)
+  player.airStretch=player.onGround?0:-Math.min(0.15,Math.abs(player.vy)*0.011);
   const targetCam=player.x-W*0.42+player.facing*(70+Math.min(38,Math.abs(player.vx)*9));
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
   // Manu corre atrás da Malu, sempre à mesma distância — com física própria (pula degraus e buracos)
@@ -1477,18 +1499,18 @@ function drawMaluInGame(){
   const breath=idle?Math.sin(tt*2)*0.9:0;                       // respiração parada
   const lean=Math.max(-0.17,Math.min(0.17,player.vx*0.035));    // inclina ao acelerar/frear
   const rising=player.vy>1;                                     // subindo x caindo
-  // braços: balanço anti-fase ao correr; erguidos no pulo; leve respiro parado
+  const amp=player.animAmp;                                     // amplitude suavizada (nunca troca de golpe idle↔andando)
+  // braços: balanço anti-fase ao correr (mesclado por amp); erguidos no pulo; leve respiro parado
   let armF,armB;
-  if(walking){const s=Math.sin(t)*0.65;armF=0.3-s;armB=0.2+s;}  // contra-fase com as pernas
-  else if(airborne){if(rising){armF=2.3;armB=-2.3;}else{armF=1.8;armB=-1.8;}}
-  else{const b=Math.sin(tt*2)*0.06;armF=0.18+b;armB=0.15-b;}
+  if(airborne){if(rising){armF=2.3;armB=-2.3;}else{armF=1.8;armB=-1.8;}}
+  else{const s=Math.sin(t)*0.65*amp,b=Math.sin(tt*2)*0.06*(1-amp);armF=(0.3-s)*amp+(0.18+b)*(1-amp);armB=(0.2+s)*amp+(0.15-b)*(1-amp);}
   const fluttering=airborne&&player.flutterT>0&&player.flutterT<0.6&&!player.flutterUsed;
   if(fluttering){armF=1.05+Math.sin(tt*10)*0.15;armB=-1.05-Math.sin(tt*10)*0.15;}  // braços abertos planando
   if(player.throwT>0){const pr=1-player.throwT/0.3;armF=-0.6+pr*2.4;armB=0.2;}  // gesto de arremesso (recua e joga)
   else if(player.grabT>0){armF=1.35;armB=0.2;}                  // estica pra pegar
   else if(player.holding!==null&&!airborne)armF=1.2;            // segura a bolinha à frente
   else if(idle&&player.idleAct==='hair_touch')armF=2.5;         // leva a mão ao cabelo
-  let bodyBobV=walking?Math.abs(Math.sin(t))*1.5:(idle?breath:(airborne?(rising?-3:1):0));
+  let bodyBobV=airborne?(rising?-3:1):(Math.abs(Math.sin(t))*1.5*amp+breath*(1-amp));
   // reações variadas (comemorações diferentes a cada vez — nunca a mesma)
   let extraSpin=0;
   if(player.reactT>0){
@@ -1500,15 +1522,16 @@ function drawMaluInGame(){
   // pisca durante invulnerabilidade (some por instantes)
   if(invuln>0&&Math.floor(tt*12)%2===0){return;}
   ctx.save();ctx.translate(sx,sy);
-  const sq=player.squash;
-  ctx.rotate(player.leanS*player.facing+extraSpin);
+  const sq=player.squash+(player.airStretch||0);
+  ctx.rotate(player.leanS*player.facing+player.hipRock+extraSpin);
   ctx.scale(player.facing*(1+sq*0.5),1-sq*0.5);
   const rideId=LOOKS.ride[look.ride||0].id,wheeled=(rideId==='patinete'||rideId==='bike'||rideId==='ebike');
   renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,
-    legSwing:wheeled?0:(walking?Math.sin(t)*7:(airborne?(rising?3:7):0)),
+    legSwing:wheeled?0:(airborne?(rising?3:7):Math.sin(t)*7*amp),
     armF,armB,
     bodyBob:bodyBobV,
-    ponyB:walking?Math.sin(t-1)*3:(idle?Math.sin(tt*2-0.6)*1.4:(airborne?(rising?-5:4):0)),
+    headBob:player.headBob,
+    ponyB:airborne?(rising?-5:4):(Math.sin(t-1)*3*amp+Math.sin(tt*2-0.6)*1.4*(1-amp)),
     hairLagX:player.hairLagX,hairLagY:player.hairLagY,lookX:player.lookXs,lookY:player.lookYs,
     pedalPhase:player.anim*0.9,wheelSpin:player.anim*2.6,
     holding:player.holding!==null,blink:player.blinkV,t:tt});
