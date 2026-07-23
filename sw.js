@@ -1,5 +1,5 @@
 // Service worker do "Aventuras da Malu" — guarda o jogo no celular pra abrir sem internet.
-const CACHE = 'malu-v2';
+const CACHE = 'malu-v3';
 const ASSETS = [
   './',
   './index.html',

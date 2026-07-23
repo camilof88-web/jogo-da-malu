@@ -93,7 +93,7 @@
   .vcatTabs::-webkit-scrollbar { display:none; }
   .vcatTab { border:none; border-radius:999px; padding:7px 15px; font-weight:800; font-size:12px; background:#f7f2ff; color:#9b5de5; white-space:nowrap; flex-shrink:0; }
   .vcatTab.active { background:linear-gradient(135deg,#9b5de5,#f15bb5); color:#fff; box-shadow:0 3px 10px rgba(155,93,229,0.35); }
-  .vitrineGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; overflow-y:auto; flex:1; padding:2px; }
+  .vitrineGrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); grid-auto-rows:min-content; align-items:start; align-content:start; gap:8px; overflow-y:auto; flex:1; padding:2px; }
   .vitem { background:#f7f2ff; border-radius:14px; padding:6px 4px 5px; display:flex; flex-direction:column; align-items:center; gap:3px; border:2.5px solid transparent; cursor:pointer; transition:transform .08s,border-color .1s; -webkit-tap-highlight-color:transparent; }
   .vitem.vequipped { border-color:#9b5de5; background:#ede5ff; }
   .vitem:active { transform:scale(.93); }
@@ -246,8 +246,9 @@ function drawShoe(g,ax,type,front){
   else if(type==='sandalia'){g.fillStyle=front?'#ffd166':'#ffb703';rrp(g,ax-7,-5,14,5,2.5);g.fill();g.strokeStyle=front?'#fb8500':'#e07800';g.lineWidth=2.2;g.lineCap='round';g.beginPath();g.moveTo(ax-5,-5);g.lineTo(ax-2,-12);g.moveTo(ax+4,-5);g.lineTo(ax+2,-12);g.moveTo(ax-6,-3);g.lineTo(ax+6,-3);g.stroke();}
   else{g.fillStyle=front?'#f4c430':'#d9a821';rrp(g,ax-6,-6,14,6,3);g.fill();g.fillStyle='#fff3c4';g.beginPath();g.arc(ax+1,-5,1.6,0,Math.PI*2);g.fill();}
 }
-function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front){
-  const upper=13,fore=11,fang=angle-0.32;
+function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,scaleLen,bendAmt){
+  scaleLen=scaleLen||1;bendAmt=bendAmt===undefined?0.32:bendAmt;
+  const upper=13*scaleLen,fore=11*scaleLen,fang=angle-bendAmt;
   const ex=shX+Math.sin(angle)*upper,ey=shY+Math.cos(angle)*upper;
   const hx=ex+Math.sin(fang)*fore,hy=ey+Math.cos(fang)*fore;
   g.lineCap='round';
@@ -256,10 +257,23 @@ function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front){
   g.fillStyle=skinCol;g.beginPath();g.arc(hx,hy,3.5,0,Math.PI*2);g.fill();
   return[hx,hy];
 }
+// Aponta o braço exatamente para um alvo (guidão etc), esticando o comprimento até a distância real
+function drawArmTo(g,shX,shY,tx,ty,sleeveCol,skinCol,front){
+  const dx=tx-shX,dy=ty-shY,dist=Math.hypot(dx,dy)||1;
+  const angle=Math.atan2(dx,dy);
+  const scaleLen=Math.max(0.55,Math.min(1.7,dist/24));
+  return drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,scaleLen,0.08);
+}
+// Rig: tabela de encaixe do personagem em cada veículo (pivot único = pés no chão, y=0)
+const RIDE_RIG={
+  patinete:{gripL:{x:-10,y:-45},gripR:{x:13,y:-45},footL:{x:-4,y:-4},footR:{x:4,y:-4},deckY:-4},
+  bike:{gripL:{x:7,y:-41},gripR:{x:15,y:-41},seat:{x:-2,y:-24},crank:{x:-2,y:-13},pedalR:7,wheelY:-15,wheelR:15,wheelBackX:-20,wheelFrontX:22,frame:'#ff5da2'},
+  ebike:{gripL:{x:7,y:-41},gripR:{x:15,y:-41},seat:{x:-2,y:-24},crank:{x:-2,y:-13},pedalR:7,wheelY:-15,wheelR:15,wheelBackX:-20,wheelFrontX:22,frame:'#33c4b8'}
+};
 function drawBow(g,cx,cy,scale=1,color='#f15bb5'){g.save();g.translate(cx,cy);g.scale(scale,scale);g.fillStyle=color;g.beginPath();g.moveTo(0,0);g.lineTo(-7,-5);g.lineTo(-7,3);g.closePath();g.fill();g.beginPath();g.moveTo(0,0);g.lineTo(7,-5);g.lineTo(7,3);g.closePath();g.fill();g.fillStyle=shade(color,-30);g.beginPath();g.arc(0,0,2.4,0,Math.PI*2);g.fill();g.restore();}
 
-function drawHelmet(g,hy,R){
-  g.save();g.translate(0,hy);
+function drawHelmet(g,hy,R,hlx,hly){
+  g.save();g.translate((hlx||0)*0.5,hy+(hly||0)*0.5);
   g.fillStyle='#ff6fae';g.beginPath();g.arc(0,0,R+3.5,Math.PI,Math.PI*2);g.fill();
   g.fillStyle='#ff8fc0';g.beginPath();g.arc(0,0,R+3.5,Math.PI*1.05,Math.PI*1.5);g.fill();
   g.strokeStyle='#ffd1e8';g.lineWidth=3.2;g.beginPath();g.arc(0,0,R+2,Math.PI*1.15,Math.PI*1.85);g.stroke();
@@ -280,25 +294,40 @@ function drawSkate(g,ax){
 }
 function drawRideBack(g,ride){
   if(ride==='patinete'){
-    g.fillStyle='#333';g.beginPath();g.arc(-14,-4,5.5,0,Math.PI*2);g.arc(17,-4,5.5,0,Math.PI*2);g.fill();
-    g.fillStyle='#ff9ecb';g.beginPath();g.arc(-14,-4,2.2,0,Math.PI*2);g.arc(17,-4,2.2,0,Math.PI*2);g.fill();
-    g.fillStyle='#ff5da2';rrp(g,-17,-9,34,4.5,2);g.fill();g.fillStyle='#ff8fc0';rrp(g,-17,-9,34,2,1);g.fill();
+    const rig=RIDE_RIG.patinete,deckY=rig.deckY;
+    // rodinhas no chão (raio pequeno, tocando y=0)
+    for(const wx of[-14,20]){g.fillStyle='#333';g.beginPath();g.arc(wx,-6,6,0,Math.PI*2);g.fill();g.fillStyle='#ff9ecb';g.beginPath();g.arc(wx,-6,2.4,0,Math.PI*2);g.fill();}
+    // deck (plataforma onde os pés ficam)
+    g.fillStyle='#ff5da2';rrp(g,-16,deckY-3,36,5,2);g.fill();g.fillStyle='#ff8fc0';rrp(g,-16,deckY-3,36,2,1);g.fill();
   }else{
-    const frame=ride==='ebike'?'#33c4b8':'#ff5da2';
-    for(const wx of[-16,18]){g.strokeStyle='#333';g.lineWidth=3.4;g.beginPath();g.arc(wx,-10,10.5,0,Math.PI*2);g.stroke();g.strokeStyle='rgba(200,205,215,0.8)';g.lineWidth=1;for(let a=0;a<6;a++){const an=a/6*Math.PI*2;g.beginPath();g.moveTo(wx,-10);g.lineTo(wx+Math.cos(an)*9.5,-10+Math.sin(an)*9.5);g.stroke();}g.fillStyle=frame;g.beginPath();g.arc(wx,-10,2.6,0,Math.PI*2);g.fill();}
-    g.strokeStyle=frame;g.lineWidth=3.2;g.lineJoin='round';g.beginPath();g.moveTo(-16,-10);g.lineTo(1,-10);g.lineTo(9,-30);g.lineTo(-4,-30);g.closePath();g.moveTo(1,-10);g.lineTo(18,-10);g.lineTo(9,-30);g.stroke();
-    g.fillStyle='#333';rrp(g,-8,-33,13,4,2);g.fill();
-    g.fillStyle='#555';g.beginPath();g.arc(1,-9,3,0,Math.PI*2);g.fill();
+    const rig=RIDE_RIG[ride],frame=rig.frame,wy=rig.wheelY,wr=rig.wheelR;
+    // rodas (tocam o chão em y=0)
+    for(const wx of[rig.wheelBackX,rig.wheelFrontX]){
+      g.strokeStyle='#333';g.lineWidth=3.4;g.beginPath();g.arc(wx,wy,wr,0,Math.PI*2);g.stroke();
+      g.strokeStyle='rgba(200,205,215,0.85)';g.lineWidth=1;for(let a=0;a<8;a++){const an=a/8*Math.PI*2;g.beginPath();g.moveTo(wx,wy);g.lineTo(wx+Math.cos(an)*(wr-2),wy+Math.sin(an)*(wr-2));g.stroke();}
+      g.fillStyle=frame;g.beginPath();g.arc(wx,wy,2.8,0,Math.PI*2);g.fill();
+    }
+    // quadro: eixo traseiro → selim → pedivela → eixo dianteiro
+    g.strokeStyle=frame;g.lineWidth=3.4;g.lineJoin='round';g.lineCap='round';
+    g.beginPath();g.moveTo(rig.wheelBackX,wy);g.lineTo(rig.seat.x,rig.seat.y);g.lineTo(rig.crank.x,rig.crank.y);g.lineTo(rig.wheelFrontX,wy);g.stroke();
+    g.beginPath();g.moveTo(rig.crank.x,rig.crank.y);g.lineTo(rig.wheelBackX,wy);g.stroke();
+    // selim
+    g.fillStyle='#333';rrp(g,rig.seat.x-7,rig.seat.y-3,14,4,2);g.fill();
+    // pedivela (eixo central)
+    g.fillStyle='#555';g.beginPath();g.arc(rig.crank.x,rig.crank.y,3,0,Math.PI*2);g.fill();
   }
 }
 function drawRideFront(g,ride){
   if(ride==='patinete'){
-    g.strokeStyle='#c9ccd4';g.lineWidth=3.2;g.lineCap='round';g.beginPath();g.moveTo(16,-8);g.lineTo(20,-48);g.stroke();
-    g.beginPath();g.moveTo(11,-48);g.lineTo(28,-48);g.stroke();
-    g.fillStyle='#ff5da2';g.beginPath();g.arc(11,-48,2.6,0,Math.PI*2);g.arc(28,-48,2.6,0,Math.PI*2);g.fill();
+    const rig=RIDE_RIG.patinete;
+    g.strokeStyle='#c9ccd4';g.lineWidth=3.2;g.lineCap='round';g.beginPath();g.moveTo(rig.deckY-2>0?0:14,rig.deckY-3);g.lineTo(rig.gripL.x+18,rig.gripL.y+2);g.stroke();
+    g.beginPath();g.moveTo(rig.gripL.x,rig.gripL.y);g.lineTo(rig.gripR.x,rig.gripR.y);g.stroke();
+    g.fillStyle='#ff5da2';g.beginPath();g.arc(rig.gripL.x,rig.gripL.y,2.6,0,Math.PI*2);g.arc(rig.gripR.x,rig.gripR.y,2.6,0,Math.PI*2);g.fill();
   }else{
-    g.strokeStyle='#8a8f98';g.lineWidth=2.8;g.lineCap='round';g.beginPath();g.moveTo(18,-10);g.lineTo(23,-32);g.lineTo(15,-34);g.stroke();
-    if(ride==='ebike'){g.fillStyle='#2a2f45';rrp(g,-6,-25,13,7,2);g.fill();g.fillStyle='#ffd166';g.font='bold 8px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('⚡',0.5,-21);g.fillStyle='#fff3c4';g.beginPath();g.arc(24,-30,2.6,0,Math.PI*2);g.fill();}
+    const rig=RIDE_RIG[ride];
+    g.strokeStyle='#8a8f98';g.lineWidth=2.8;g.lineCap='round';g.beginPath();g.moveTo(rig.wheelFrontX,rig.wheelY);g.lineTo(rig.gripR.x+4,rig.gripR.y+6);g.lineTo(rig.gripL.x,rig.gripL.y+2);g.stroke();
+    g.beginPath();g.moveTo(rig.gripL.x,rig.gripL.y);g.lineTo(rig.gripR.x,rig.gripR.y);g.stroke();
+    if(ride==='ebike'){g.fillStyle='#2a2f45';rrp(g,rig.seat.x-6,rig.seat.y-16,13,7,2);g.fill();g.fillStyle='#ffd166';g.font='bold 8px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('⚡',rig.seat.x+0.5,rig.seat.y-12);g.fillStyle='#fff3c4';g.beginPath();g.arc(rig.wheelFrontX+2,rig.wheelY-16,2.6,0,Math.PI*2);g.fill();}
   }
 }
 function drawManu(g,t){
@@ -386,18 +415,37 @@ function renderMalu(g,o){
   const hlx=o.hairLagX||0,hly=o.hairLagY||0,lookX=o.lookX||0,lookY=o.lookY||0;
   g.lineCap='round';
   if(o.pet==='manu')drawManu(g,t);
-  if(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike')drawRideBack(g,o.ride);
-  // braço de trás (ombro→cotovelo→mão, atrás do corpo)
-  drawArm(g,-9,-50-bob,armB,sleeveB,SKIN_SH,false);
+  const rideRig=RIDE_RIG[o.ride];
+  const wheeledRig=(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike');
+  if(wheeledRig)drawRideBack(g,o.ride);
+  // braço de trás (ombro→cotovelo→mão, atrás do corpo) — mira no guidão quando há veículo com grip
+  if(rideRig&&rideRig.gripL)drawArmTo(g,-9,-50-bob,rideRig.gripL.x,rideRig.gripL.y,sleeveB,SKIN_SH,false);
+  else drawArm(g,-9,-50-bob,armB,sleeveB,SKIN_SH,false);
   // pernas
   const legCol=isDress?SKIN:pc,legColF=isDress?'#d49a6e':pcf,legW=isDress?7:9.5;
-  // perna de trás (quadril→joelho→pé, com dobra natural)
-  {const hx=-5,fx=-6-ls,kx=(hx+fx)/2-Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legCol;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
-  drawShoe(g,-7-ls,o.shoes,false);
-  // perna da frente
-  {const hx=5,fx=6+ls,kx=(hx+fx)/2+Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
-  drawShoe(g,5+ls,o.shoes,true);
-  if(o.ride==='patins'){drawSkate(g,-7-ls);drawSkate(g,5+ls);}
+  if(o.ride==='bike'||o.ride==='ebike'){
+    // pedalando: quadril fixo, pé segue o círculo do pedivela
+    const rig=rideRig,phase=(o.pedalPhase!==undefined?o.pedalPhase:t*3.4);
+    for(let i=0;i<2;i++){
+      const ph=phase+i*Math.PI;
+      const px=rig.crank.x+Math.sin(ph)*rig.pedalR,py=rig.crank.y-Math.cos(ph)*rig.pedalR*0.55;
+      const hx=i===0?-5:5,kx=(hx+px)/2,ky=-17;
+      g.strokeStyle=i===0?legCol:legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,px,py);g.stroke();
+      drawShoe(g,px,o.shoes,i===1);
+    }
+  }else if(o.ride==='patinete'){
+    // em pé, pés juntos no deck do patinete
+    const rig=rideRig;
+    {const hx=-5,fx=rig.footL.x,fy=rig.footL.y;g.strokeStyle=legCol;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.lineTo(fx,fy);g.stroke();drawShoe(g,fx,o.shoes,false);}
+    {const hx=5,fx=rig.footR.x,fy=rig.footR.y;g.strokeStyle=legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.lineTo(fx,fy);g.stroke();drawShoe(g,fx,o.shoes,true);}
+  }else{
+    // andando/parada/patins/pulando: ciclo normal de caminhada
+    {const hx=-5,fx=-6-ls,kx=(hx+fx)/2-Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legCol;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
+    drawShoe(g,-7-ls,o.shoes,false);
+    {const hx=5,fx=6+ls,kx=(hx+fx)/2+Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
+    drawShoe(g,5+ls,o.shoes,true);
+    if(o.ride==='patins'){drawSkate(g,-7-ls);drawSkate(g,5+ls);}
+  }
   if(o.outfit==='vermelha'){const neon=['#ff5d8f','#4cc9f0','#ffd166','#80ed99','#bdb2ff'];for(let i=0;i<5;i++){g.fillStyle=neon[i];g.beginPath();g.arc((i%2?-5.5-ls:5.5+ls)+(i-2)*0.8,-13-i*2.4,1.3,0,Math.PI*2);g.fill();}}
   // tronco/roupa
   if(o.outfit==='florido'){
@@ -493,8 +541,9 @@ function renderMalu(g,o){
     g.fillStyle=HAIR_HI;[[-28,hy+13,3.6],[28,hy+13,3.6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
   }
   g.restore();
-  // braço da frente (por cima do cabelo, pra ficar sempre visível)
-  drawArm(g,10,-50-bob,armF,sleeve,SKIN,true);
+  // braço da frente (por cima do cabelo, pra ficar sempre visível) — mira no guidão quando há veículo com grip
+  if(rideRig&&rideRig.gripR)drawArmTo(g,10,-50-bob,rideRig.gripR.x,rideRig.gripR.y,sleeve,SKIN,true);
+  else drawArm(g,10,-50-bob,armF,sleeve,SKIN,true);
   // rosto base — formato infantil: bochechas cheias + queixo suave e arredondado
   g.fillStyle=SKIN;g.beginPath();
   g.moveTo(0,hy-R);
@@ -560,7 +609,7 @@ function renderMalu(g,o){
   g.fillStyle='#fff';g.beginPath();g.moveTo(2.4,hy+8.6);g.quadraticCurveTo(9.5,hy+10.8,17.3,hy+8.2);g.quadraticCurveTo(10,hy+13.4,2.4,hy+8.6);g.closePath();g.fill();
   g.fillStyle='rgba(255,118,118,0.38)';g.beginPath();g.arc(-1.5,hy+6.5,3.6,0,Math.PI*2);g.arc(20,hy+5.5,3.2,0,Math.PI*2);g.fill();
   if(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike')drawRideFront(g,o.ride);
-  if(o.ride&&o.ride!=='none')drawHelmet(g,hy,R);
+  if(o.ride&&o.ride!=='none')drawHelmet(g,hy,R,hlx,hly);
 }
 // ===== FASES =====
 function lvl1(){
@@ -1412,6 +1461,7 @@ function drawMaluInGame(){
     bodyBob:bodyBobV,
     ponyB:walking?Math.sin(t-1)*3:(idle?Math.sin(tt*2-0.6)*1.4:(airborne?(rising?-5:4):0)),
     hairLagX:player.hairLagX,hairLagY:player.hairLagY,lookX:player.lookXs,lookY:player.lookYs,
+    pedalPhase:player.anim*0.9,
     holding:player.holding!==null,blink:player.blinkV,t:tt});
   ctx.restore();
 }
