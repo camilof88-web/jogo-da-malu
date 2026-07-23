@@ -403,6 +403,7 @@ function drawManuInGame(){
   drawManuAnim(ctx,manuPhase,moving,!manuOnGround);
   ctx.restore();
 }
+function pivotRotate(g,px,py,angle){g.translate(px,py);g.rotate(angle);g.translate(-px,-py);}
 function renderMalu(g,o){
   if(o.skin&&SKIN_TONES[o.skin]){SKIN=SKIN_TONES[o.skin][0];SKIN_SH=SKIN_TONES[o.skin][1];}
   const ls=o.legSwing||0,as_=o.armSwing||0,bob=o.bodyBob||0,pb=o.ponyB||0,t=o.t||0;
@@ -421,10 +422,14 @@ function renderMalu(g,o){
   const rideRig=RIDE_RIG[o.ride];
   const wheeledRig=(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike');
   if(wheeledRig)drawRideBack(g,o.ride,o.wheelSpin);
+  const spineLean=o.spineLean||0,headTilt=o.headTilt||0;
+  // TORSO/SPINE (bone real): tudo do ombro pra cima gira sobre o quadril, herdado pela cabeça depois
+  g.save();pivotRotate(g,0,-24,spineLean);
   // braço de trás (ombro→cotovelo→mão, atrás do corpo) — mira no guidão quando há veículo com grip
   if(rideRig&&rideRig.gripL)drawArmTo(g,-9,-50-bob,rideRig.gripL.x,rideRig.gripL.y,sleeveB,SKIN_SH,false);
   else drawArm(g,-9,-50-bob,armB,sleeveB,SKIN_SH,false);
-  // pernas
+  g.restore();
+  // pernas (quadril/root — não giram com o torso)
   const legCol=isDress?SKIN:pc,legColF=isDress?'#d49a6e':pcf,legW=isDress?7:9.5;
   if(o.ride==='bike'||o.ride==='ebike'){
     // pedalando: quadril fixo, pé segue o círculo do pedivela
@@ -450,6 +455,7 @@ function renderMalu(g,o){
     if(o.ride==='patins'){drawSkate(g,-7-ls);drawSkate(g,5+ls);}
   }
   if(o.outfit==='vermelha'){const neon=['#ff5d8f','#4cc9f0','#ffd166','#80ed99','#bdb2ff'];for(let i=0;i<5;i++){g.fillStyle=neon[i];g.beginPath();g.arc((i%2?-5.5-ls:5.5+ls)+(i-2)*0.8,-13-i*2.4,1.3,0,Math.PI*2);g.fill();}}
+  g.save();pivotRotate(g,0,-24,spineLean);
   // tronco/roupa
   if(o.outfit==='florido'){
     const dg=g.createLinearGradient(0,-54,0,-18);dg.addColorStop(0,'#f9eed7');dg.addColorStop(1,'#f2e0bd');g.fillStyle=dg;
@@ -506,6 +512,8 @@ function renderMalu(g,o){
     g.beginPath();g.moveTo(6,-27);g.quadraticCurveTo(9,-19,6,-13);g.quadraticCurveTo(3,-20,3,-26);g.closePath();g.fill();
     g.fillStyle='#3db8af';g.beginPath();g.arc(0,-28.5-bob*0.3,3.4,0,Math.PI*2);g.fill();
   }
+  // CABEÇA (bone real, aninhado dentro do torso): herda a rotação do torso + tilt próprio
+  g.save();pivotRotate(g,0,hy,headTilt);
   // cabelo de trás (com inércia: atrasa/chicoteia ao acelerar, frear e virar)
   g.save();g.translate(hlx,hly);
   if(o.hair==='cachos'||o.hair==='cachospreso'){
@@ -543,10 +551,13 @@ function renderMalu(g,o){
     [[26,hy-1,10.5],[30,hy+11,10],[28,hy+22,9]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
     g.fillStyle=HAIR_HI;[[-28,hy+13,3.6],[28,hy+13,3.6]].forEach(([x2,y2,r2])=>{g.beginPath();g.arc(x2,y2,r2,0,Math.PI*2);g.fill();});
   }
-  g.restore();
-  // braço da frente (por cima do cabelo, pra ficar sempre visível) — mira no guidão quando há veículo com grip
+  g.restore(); // fecha cabelo-lag interno
+  g.restore(); // fecha CABEÇA (parte 1: cabelo de trás)
+  // braço da frente (por cima do cabelo, pra ficar sempre visível) — nível do torso, não gira com a cabeça
   if(rideRig&&rideRig.gripR)drawArmTo(g,10,-50-bob,rideRig.gripR.x,rideRig.gripR.y,sleeve,SKIN,true);
   else drawArm(g,10,-50-bob,armF,sleeve,SKIN,true);
+  // CABEÇA (parte 2, mesmo ângulo): rosto, cabelo frontal, acessórios, capacete
+  g.save();pivotRotate(g,0,hy,headTilt);
   // rosto base — formato infantil: bochechas cheias + queixo suave e arredondado
   g.fillStyle=SKIN;g.beginPath();
   g.moveTo(0,hy-R);
@@ -611,8 +622,10 @@ function renderMalu(g,o){
   g.fillStyle='#8e3b2c';g.beginPath();g.moveTo(1.5,hy+8.5);g.quadraticCurveTo(9.5,hy+17,18,hy+8);g.quadraticCurveTo(10,hy+11.5,1.5,hy+8.5);g.closePath();g.fill();
   g.fillStyle='#fff';g.beginPath();g.moveTo(2.4,hy+8.6);g.quadraticCurveTo(9.5,hy+10.8,17.3,hy+8.2);g.quadraticCurveTo(10,hy+13.4,2.4,hy+8.6);g.closePath();g.fill();
   g.fillStyle='rgba(255,118,118,0.38)';g.beginPath();g.arc(-1.5,hy+6.5,3.6,0,Math.PI*2);g.arc(20,hy+5.5,3.2,0,Math.PI*2);g.fill();
-  if(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike')drawRideFront(g,o.ride);
   if(o.ride&&o.ride!=='none')drawHelmet(g,hy,R,hlx,hly);
+  g.restore(); // fecha CABEÇA
+  if(o.ride==='patinete'||o.ride==='bike'||o.ride==='ebike')drawRideFront(g,o.ride);
+  g.restore(); // fecha TORSO/SPINE
 }
 // ===== FASES =====
 function lvl1(){
@@ -776,7 +789,8 @@ function resetWorld(idx){
   particles=[];initAmbient();
   player={x:60,y:0,w:44,h:64,vx:0,vy:0,facing:1,onGround:true,wasOnGround:true,coyote:0,jumpHeld:0,holding:null,anim:0,squash:0,stepT:0,throwT:0,grabT:0,fallV:0,
     hairLagX:0,hairLagY:0,leanS:0,leanV:0,idleT:0,idleAct:'',idleActT:0,lookX:0,lookY:0,lookXs:0,lookYs:0,blinkT:2,blinkV:1,dblink:0,reactT:0,reactKind:'',reactDur:0.55,comboCount:0,flutterT:0,flutterUsed:false,
-    jumpAnticipT:0,jumpQueued:false,headBob:0,headBobV:0,hipRock:0,hipRockV:0,animAmp:0,airStretch:0};
+    jumpAnticipT:0,jumpQueued:false,headBob:0,headBobV:0,hipRock:0,hipRockV:0,animAmp:0,airStretch:0,
+    spineLean:0,spineLeanV:0,headTilt:0,headTiltV:0};
   manuX=player.x-52;manuPhase=0;manuDir=1;manuY=0;manuVY=0;manuOnGround=true;
   flyers=[];flashA=0;
   const hz=HAZARDS[idx]||{};
@@ -943,6 +957,11 @@ function update(dt){
   player.headBobV+=(targetHeadBob-player.headBob)*0.24-player.headBobV*0.24;player.headBob+=player.headBobV;
   // squash/stretch contínuo no ar, puxado pela velocidade vertical (além do squash de impacto)
   player.airStretch=player.onGround?0:-Math.min(0.15,Math.abs(player.vy)*0.011);
+  // hierarquia real (quadril→torso→cabeça): cada bone atrasa o de baixo, como ossos de verdade
+  const spineTarget=player.leanS+player.hipRock*0.4;
+  player.spineLeanV+=(spineTarget-player.spineLean)*0.26-player.spineLeanV*0.24;player.spineLean+=player.spineLeanV;
+  const headTarget=player.spineLean*0.6+(player.lookXs||0)*0.09;
+  player.headTiltV+=(headTarget-player.headTilt)*0.22-player.headTiltV*0.22;player.headTilt+=player.headTiltV;
   const targetCam=player.x-W*0.42+player.facing*(70+Math.min(38,Math.abs(player.vx)*9));
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
   // Manu corre atrás da Malu, sempre à mesma distância — com física própria (pula degraus e buracos)
@@ -1531,6 +1550,7 @@ function drawMaluInGame(){
     armF,armB,
     bodyBob:bodyBobV,
     headBob:player.headBob,
+    spineLean:player.spineLean,headTilt:player.headTilt,
     ponyB:airborne?(rising?-5:4):(Math.sin(t-1)*3*amp+Math.sin(tt*2-0.6)*1.4*(1-amp)),
     hairLagX:player.hairLagX,hairLagY:player.hairLagY,lookX:player.lookXs,lookY:player.lookYs,
     pedalPhase:player.anim*0.9,wheelSpin:player.anim*2.6,
