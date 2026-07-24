@@ -246,23 +246,40 @@ function drawShoe(g,ax,type,front){
   else if(type==='sandalia'){g.fillStyle=front?'#ffd166':'#ffb703';rrp(g,ax-7,-5,14,5,2.5);g.fill();g.strokeStyle=front?'#fb8500':'#e07800';g.lineWidth=2.2;g.lineCap='round';g.beginPath();g.moveTo(ax-5,-5);g.lineTo(ax-2,-12);g.moveTo(ax+4,-5);g.lineTo(ax+2,-12);g.moveTo(ax-6,-3);g.lineTo(ax+6,-3);g.stroke();}
   else{g.fillStyle=front?'#f4c430':'#d9a821';rrp(g,ax-6,-6,14,6,3);g.fill();g.fillStyle='#fff3c4';g.beginPath();g.arc(ax+1,-5,1.6,0,Math.PI*2);g.fill();}
 }
-function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,scaleLen,bendAmt){
-  scaleLen=scaleLen||1;bendAmt=bendAmt===undefined?0.32:bendAmt;
-  const upper=13*scaleLen,fore=11*scaleLen,fang=angle-bendAmt;
-  const ex=shX+Math.sin(angle)*upper,ey=shY+Math.cos(angle)*upper;
-  const hx=ex+Math.sin(fang)*fore,hy=ey+Math.cos(fang)*fore;
-  g.lineCap='round';
-  g.strokeStyle=skinCol;g.lineWidth=front?6.5:6;g.beginPath();g.moveTo(ex,ey);g.lineTo(hx,hy);g.stroke();
-  g.strokeStyle=sleeveCol;g.lineWidth=front?7.8:7.2;g.beginPath();g.moveTo(shX,shY);g.lineTo(ex,ey);g.stroke();
-  g.fillStyle=skinCol;g.beginPath();g.arc(hx,hy,3.5,0,Math.PI*2);g.fill();
-  return[hx,hy];
+// IK de 2 ossos (lei dos cossenos): dado o ponto base e um alvo, devolve o cotovelo/joelho e a
+// ponta real (grudada, encurtada se o alvo estiver fora do alcance) — articulação de verdade,
+// não uma curva decorativa. bendSign define pra que lado a articulação se dobra.
+function solveIK2(bx,by,tx,ty,l1,l2,bendSign){
+  let dx=tx-bx,dy=ty-by,dist=Math.hypot(dx,dy)||0.01;
+  const maxD=l1+l2-0.05,minD=Math.abs(l1-l2)+0.05;
+  const clamped=Math.max(minD,Math.min(maxD,dist));
+  const ux=dx/dist,uy=dy/dist;
+  const ex=bx+ux*clamped,ey=by+uy*clamped;
+  const baseAng=Math.atan2(ey-by,ex-bx);
+  const cosA=(l1*l1+clamped*clamped-l2*l2)/(2*l1*clamped);
+  const a=Math.acos(Math.max(-1,Math.min(1,cosA)));
+  const midAng=baseAng+bendSign*a;
+  return{kx:bx+Math.cos(midAng)*l1,ky:by+Math.sin(midAng)*l1,ex,ey};
 }
-// Aponta o braço exatamente para um alvo (guidão etc), esticando o comprimento até a distância real
+function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,reach){
+  reach=reach===undefined?0.86:reach;
+  const l1=13,l2=11,full=l1+l2;
+  const tx=shX+Math.sin(angle)*full*reach,ty=shY+Math.cos(angle)*full*reach;
+  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,l1,l2,-1);
+  g.lineCap='round';
+  g.strokeStyle=skinCol;g.lineWidth=front?6.5:6;g.beginPath();g.moveTo(kx,ky);g.lineTo(ex,ey);g.stroke();
+  g.strokeStyle=sleeveCol;g.lineWidth=front?7.8:7.2;g.beginPath();g.moveTo(shX,shY);g.lineTo(kx,ky);g.stroke();
+  g.fillStyle=skinCol;g.beginPath();g.arc(ex,ey,3.5,0,Math.PI*2);g.fill();
+  return[ex,ey];
+}
+// Aponta o braço exatamente para um alvo (guidão etc) com cotovelo real via IK
 function drawArmTo(g,shX,shY,tx,ty,sleeveCol,skinCol,front){
-  const dx=tx-shX,dy=ty-shY,dist=Math.hypot(dx,dy)||1;
-  const angle=Math.atan2(dx,dy);
-  const scaleLen=Math.max(0.55,Math.min(1.7,dist/24));
-  return drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,scaleLen,0.08);
+  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,13,11,-1);
+  g.lineCap='round';
+  g.strokeStyle=skinCol;g.lineWidth=front?6.5:6;g.beginPath();g.moveTo(kx,ky);g.lineTo(ex,ey);g.stroke();
+  g.strokeStyle=sleeveCol;g.lineWidth=front?7.8:7.2;g.beginPath();g.moveTo(shX,shY);g.lineTo(kx,ky);g.stroke();
+  g.fillStyle=skinCol;g.beginPath();g.arc(ex,ey,3.5,0,Math.PI*2);g.fill();
+  return[ex,ey];
 }
 // Rig: tabela de encaixe do personagem em cada veículo (pivot único = pés no chão, y=0)
 const RIDE_RIG={
@@ -283,6 +300,14 @@ function drawHelmet(g,hy,R,hlx,hly){
   g.fillStyle='rgba(255,255,255,0.55)';g.beginPath();g.ellipse(-7,-R*0.6,5,3,-0.5,0,Math.PI*2);g.fill();
   g.strokeStyle='#ff9ecb';g.lineWidth=1.8;g.lineCap='round';g.beginPath();g.moveTo(-R+2,3);g.quadraticCurveTo(-3,11,0,11);g.quadraticCurveTo(3,11,R-2,3);g.stroke();
   g.restore();
+}
+// perna com joelho real (IK) — hipX fixo em -24, alvo do pé pode estar em qualquer lugar
+function drawLegIK(g,hipX,footX,footY,legCol,legW,shoeType,front,bendSign){
+  const{kx,ky,ex,ey}=solveIK2(hipX,-24,footX,footY,9,8.5,bendSign===undefined?-1:bendSign);
+  g.strokeStyle=legCol;g.lineWidth=legW;g.lineCap='round';
+  g.beginPath();g.moveTo(hipX,-24);g.lineTo(kx,ky);g.lineTo(ex,ey);g.stroke();
+  g.save();g.translate(ex,ey+9);drawShoe(g,0,shoeType,front);g.restore();
+  return[ex,ey];
 }
 function drawSkate(g,ax){
   g.fillStyle='#ffffff';g.beginPath();g.arc(ax,-11,5.5,0,Math.PI*2);g.fill();
@@ -437,22 +462,20 @@ function renderMalu(g,o){
     for(let i=0;i<2;i++){
       const ph=phase+i*Math.PI;
       const px=rig.crank.x+Math.sin(ph)*rig.pedalR,py=rig.crank.y-Math.cos(ph)*rig.pedalR*0.55;
-      const hx=i===0?-5:5,kx=(hx+px)/2,ky=-17;
-      g.strokeStyle=i===0?legCol:legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,px,py);g.stroke();
-      drawShoe(g,px,o.shoes,i===1);
+      drawLegIK(g,i===0?-5:5,px,py,i===0?legCol:legColF,legW,o.shoes,i===1,1);
     }
   }else if(o.ride==='patinete'){
     // em pé, pés juntos no deck do patinete
     const rig=rideRig;
-    {const hx=-5,fx=rig.footL.x,fy=rig.footL.y;g.strokeStyle=legCol;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.lineTo(fx,fy);g.stroke();drawShoe(g,fx,o.shoes,false);}
-    {const hx=5,fx=rig.footR.x,fy=rig.footR.y;g.strokeStyle=legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.lineTo(fx,fy);g.stroke();drawShoe(g,fx,o.shoes,true);}
+    drawLegIK(g,-5,rig.footL.x,rig.footL.y,legCol,legW,o.shoes,false);
+    drawLegIK(g,5,rig.footR.x,rig.footR.y,legColF,legW,o.shoes,true);
   }else{
-    // andando/parada/patins/pulando: ciclo normal de caminhada
-    {const hx=-5,fx=-6-ls,kx=(hx+fx)/2-Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legCol;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
-    drawShoe(g,-7-ls,o.shoes,false);
-    {const hx=5,fx=6+ls,kx=(hx+fx)/2+Math.abs(ls)*0.1,ky=-16.5+Math.abs(ls)*0.08;g.strokeStyle=legColF;g.lineWidth=legW;g.beginPath();g.moveTo(hx,-24);g.quadraticCurveTo(kx,ky,fx,-9);g.stroke();}
-    drawShoe(g,5+ls,o.shoes,true);
-    if(o.ride==='patins'){drawSkate(g,-7-ls);drawSkate(g,5+ls);}
+    // andando/parada/patins/pulando: ciclo normal, com o pé levantando de verdade (não só deslizando)
+    const amp2=(o.walkAmp!==undefined?o.walkAmp:1);
+    const liftBack=Math.max(0,Math.cos(t))*3.6*amp2,liftFront=Math.max(0,-Math.cos(t))*3.6*amp2;
+    const[bex]=drawLegIK(g,-5,-6-ls,-9-liftBack,legCol,legW,o.shoes,false);
+    const[fex]=drawLegIK(g,5,6+ls,-9-liftFront,legColF,legW,o.shoes,true);
+    if(o.ride==='patins'){drawSkate(g,bex);drawSkate(g,fex);}
   }
   if(o.outfit==='vermelha'){const neon=['#ff5d8f','#4cc9f0','#ffd166','#80ed99','#bdb2ff'];for(let i=0;i<5;i++){g.fillStyle=neon[i];g.beginPath();g.arc((i%2?-5.5-ls:5.5+ls)+(i-2)*0.8,-13-i*2.4,1.3,0,Math.PI*2);g.fill();}}
   g.save();pivotRotate(g,0,-24,spineLean);
@@ -513,7 +536,7 @@ function renderMalu(g,o){
     g.fillStyle='#3db8af';g.beginPath();g.arc(0,-28.5-bob*0.3,3.4,0,Math.PI*2);g.fill();
   }
   // CABEÇA (bone real, aninhado dentro do torso): herda a rotação do torso + tilt próprio
-  g.save();pivotRotate(g,0,hy,headTilt);
+  g.save();g.translate(o.headTurn||0,o.neckStretch||0);pivotRotate(g,0,hy,headTilt);
   // cabelo de trás (com inércia: atrasa/chicoteia ao acelerar, frear e virar)
   g.save();g.translate(hlx,hly);
   if(o.hair==='cachos'||o.hair==='cachospreso'){
@@ -557,7 +580,7 @@ function renderMalu(g,o){
   if(rideRig&&rideRig.gripR)drawArmTo(g,10,-50-bob,rideRig.gripR.x,rideRig.gripR.y,sleeve,SKIN,true);
   else drawArm(g,10,-50-bob,armF,sleeve,SKIN,true);
   // CABEÇA (parte 2, mesmo ângulo): rosto, cabelo frontal, acessórios, capacete
-  g.save();pivotRotate(g,0,hy,headTilt);
+  g.save();g.translate(o.headTurn||0,o.neckStretch||0);pivotRotate(g,0,hy,headTilt);
   // rosto base — formato infantil: bochechas cheias + queixo suave e arredondado
   g.fillStyle=SKIN;g.beginPath();
   g.moveTo(0,hy-R);
@@ -790,7 +813,7 @@ function resetWorld(idx){
   player={x:60,y:0,w:44,h:64,vx:0,vy:0,facing:1,onGround:true,wasOnGround:true,coyote:0,jumpHeld:0,holding:null,anim:0,squash:0,stepT:0,throwT:0,grabT:0,fallV:0,
     hairLagX:0,hairLagY:0,leanS:0,leanV:0,idleT:0,idleAct:'',idleActT:0,lookX:0,lookY:0,lookXs:0,lookYs:0,blinkT:2,blinkV:1,dblink:0,reactT:0,reactKind:'',reactDur:0.55,comboCount:0,flutterT:0,flutterUsed:false,
     jumpAnticipT:0,jumpQueued:false,headBob:0,headBobV:0,hipRock:0,hipRockV:0,animAmp:0,airStretch:0,
-    spineLean:0,spineLeanV:0,headTilt:0,headTiltV:0};
+    spineLean:0,spineLeanV:0,headTilt:0,headTiltV:0,headTurn:0,headTurnV:0,neckStretch:0,neckStretchV:0};
   manuX=player.x-52;manuPhase=0;manuDir=1;manuY=0;manuVY=0;manuOnGround=true;
   flyers=[];flashA=0;
   const hz=HAZARDS[idx]||{};
@@ -962,6 +985,11 @@ function update(dt){
   player.spineLeanV+=(spineTarget-player.spineLean)*0.26-player.spineLeanV*0.24;player.spineLean+=player.spineLeanV;
   const headTarget=player.spineLean*0.6+(player.lookXs||0)*0.09;
   player.headTiltV+=(headTarget-player.headTilt)*0.22-player.headTiltV*0.22;player.headTilt+=player.headTiltV;
+  // pescoço: gira (desloca) na direção do olhar e alonga/encolhe ao olhar pra cima/baixo
+  const turnTarget=(player.lookXs||0)*3.4;
+  player.headTurnV+=(turnTarget-player.headTurn)*0.18-player.headTurnV*0.24;player.headTurn+=player.headTurnV;
+  const stretchTarget=-(player.lookYs||0)*2.6;
+  player.neckStretchV+=(stretchTarget-player.neckStretch)*0.18-player.neckStretchV*0.24;player.neckStretch+=player.neckStretchV;
   const targetCam=player.x-W*0.42+player.facing*(70+Math.min(38,Math.abs(player.vx)*9));
   camX+=(targetCam-camX)*0.07;camX=Math.max(0,Math.min(camX,WORLD_END-W));
   // Manu corre atrás da Malu, sempre à mesma distância — com física própria (pula degraus e buracos)
@@ -1547,10 +1575,11 @@ function drawMaluInGame(){
   const rideId=LOOKS.ride[look.ride||0].id,wheeled=(rideId==='patinete'||rideId==='bike'||rideId==='ebike');
   renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,
     legSwing:wheeled?0:(airborne?(rising?3:7):Math.sin(t)*7*amp),
+    walkAmp:airborne?0:amp,
     armF,armB,
     bodyBob:bodyBobV,
     headBob:player.headBob,
-    spineLean:player.spineLean,headTilt:player.headTilt,
+    spineLean:player.spineLean,headTilt:player.headTilt,headTurn:player.headTurn,neckStretch:player.neckStretch,
     ponyB:airborne?(rising?-5:4):(Math.sin(t-1)*3*amp+Math.sin(tt*2-0.6)*1.4*(1-amp)),
     hairLagX:player.hairLagX,hairLagY:player.hairLagY,lookX:player.lookXs,lookY:player.lookYs,
     pedalPhase:player.anim*0.9,wheelSpin:player.anim*2.6,
