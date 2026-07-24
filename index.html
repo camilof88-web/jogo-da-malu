@@ -1579,7 +1579,7 @@ function drawMaluInGame(){
   if(invuln>0&&Math.floor(tt*12)%2===0){return;}
   ctx.save();ctx.translate(sx,sy);
   const sq=player.squash+(player.airStretch||0);
-  ctx.rotate(player.leanS*player.facing+player.hipRock+extraSpin);
+  ctx.rotate(player.hipRock+extraSpin); // quadril/pernas ficam quase retas — a inclinação de verdade mora no torso (spineLean), não aqui
   ctx.scale(player.facing*(1+sq*0.5),1-sq*0.5);
   const rideId=LOOKS.ride[look.ride||0].id,wheeled=(rideId==='patinete'||rideId==='bike'||rideId==='ebike');
   renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,
