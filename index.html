@@ -18,7 +18,7 @@
   body { font-family:'Trebuchet MS','Comic Sans MS',sans-serif; }
   #wrap { position:fixed; inset:0; }
   #game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
-  #hud { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:14px; right:168px; display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; z-index:5; pointer-events:none; }
+  #hud { position:absolute; top:calc(10px + env(safe-area-inset-top)); left:14px; right:212px; display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; z-index:5; pointer-events:none; }
   .pill { background:linear-gradient(180deg,rgba(255,255,255,0.96),rgba(245,238,255,0.9)); border-radius:999px; padding:7px 14px; font-weight:800; color:#5a3e85; font-size:15px; box-shadow:0 4px 12px rgba(80,40,120,0.22),inset 0 1px 0 rgba(255,255,255,0.9); }
   @keyframes bumpAnim { 0%{transform:scale(1)} 38%{transform:scale(1.2)} 100%{transform:scale(1)} }
   .pill.bump { animation:bumpAnim .34s cubic-bezier(.34,1.56,.64,1); }
@@ -27,7 +27,7 @@
   .topBtn { position:absolute; top:calc(10px + env(safe-area-inset-top)); z-index:6; width:42px; height:42px; border-radius:50%; border:none; background:linear-gradient(180deg,#ffffff,#efe6fb); font-size:18px; box-shadow:0 4px 12px rgba(80,40,120,0.22),inset 0 1px 0 rgba(255,255,255,0.9); transition:transform .1s; }
   .topBtn:active { transform:scale(0.9); }
   .ctrl:active { transform:scale(0.9); }
-  #soundBtn { right:14px; } #dressBtn { right:64px; display:none; } #mapBtn { right:114px; display:none; }
+  #soundBtn { right:14px; } #dressBtn { right:64px; display:none; } #mapBtn { right:114px; display:none; } #pauseBtn { right:164px; display:none; }
   .ctrl { position:absolute; bottom:calc(22px + env(safe-area-inset-bottom)); width:74px; height:74px; border-radius:50%; background:rgba(255,255,255,0.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); border:2.5px solid rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; font-size:30px; color:#3b2d5e; font-weight:900; pointer-events:auto; box-shadow:0 4px 12px rgba(0,0,0,0.18); transition:transform .08s,background .08s; z-index:4; }
   .ctrl.active { background:rgba(255,255,255,0.85); transform:scale(0.92); }
   #leftBtn { left:20px; } #rightBtn { left:108px; } #jumpBtn { right:20px; background:rgba(255,209,102,0.6); } #throwBtn { right:108px; background:rgba(241,91,181,0.5); font-size:26px; }
@@ -110,6 +110,7 @@
   <button class="topBtn" id="soundBtn">🔊</button>
   <button class="topBtn" id="dressBtn">👗</button>
   <button class="topBtn" id="mapBtn">🗺️</button>
+  <button class="topBtn" id="pauseBtn">⏸️</button>
   <div class="ctrl" id="leftBtn">◀</div>
   <div class="ctrl" id="rightBtn">▶</div>
   <div class="ctrl" id="throwBtn">🎯</div>
@@ -171,6 +172,17 @@
     <h1>🏆 Aventura completa! 🏆</h1>
     <div class="sub" id="finalText"></div>
     <button class="bigBtn purple" id="restartAllBtn">Jogar de novo 🔁</button>
+  </div></div>
+
+  <div class="screen" id="pauseScreen"><div class="card">
+    <h1>⏸️ Pausa</h1>
+    <div class="sub" id="pauseLevelName"></div>
+    <button class="bigBtn" id="resumeBtn">▶️ Continuar</button><br>
+    <button class="bigBtn purple" id="restartLevelBtn">🔄 Reiniciar fase</button><br>
+    <button class="bigBtn purple" id="pauseMapBtn">🗺️ Trocar de fase</button><br>
+    <button class="bigBtn purple" id="pauseDressBtn">👗 Trocar roupa</button><br>
+    <button class="linkBtn" id="pauseSwitchSlotBtn">👤 Trocar jogador</button>
+    <button class="linkBtn" id="pauseHomeBtn">🏠 Início</button>
   </div></div>
 </div>
 <script>
@@ -1800,9 +1812,9 @@ function buildLevelGrid(){
 
 // ===== FLUXO =====
 const titleScreen=document.getElementById('titleScreen'),dressScreen=document.getElementById('dressScreen'),levelScreen=document.getElementById('levelScreen'),completeScreen=document.getElementById('completeScreen'),finalScreen=document.getElementById('finalScreen');
-const dressBtn=document.getElementById('dressBtn'),mapBtn=document.getElementById('mapBtn');
-const slotScreen=document.getElementById('slotScreen');
-const allScreens=[slotScreen,titleScreen,dressScreen,levelScreen,completeScreen,finalScreen];
+const dressBtn=document.getElementById('dressBtn'),mapBtn=document.getElementById('mapBtn'),pauseBtn=document.getElementById('pauseBtn');
+const slotScreen=document.getElementById('slotScreen'),pauseScreen=document.getElementById('pauseScreen');
+const allScreens=[slotScreen,titleScreen,dressScreen,levelScreen,completeScreen,finalScreen,pauseScreen];
 function showOnly(scr){allScreens.forEach(s=>s.classList.remove('show'));if(scr)scr.classList.add('show');}
 
 // --- Slots de save ---
@@ -1830,7 +1842,7 @@ function selectSlot(i){
   totalScore=0;started=false;persistSaves();
   showOnly(titleScreen);sfx.star();
 }
-function goToSlots(){saveActive();started=false;paused=true;dressBtn.style.display='none';mapBtn.style.display='none';buildSlotGrid();showOnly(slotScreen);sfx.pop();}
+function goToSlots(){saveActive();started=false;paused=true;dressBtn.style.display='none';mapBtn.style.display='none';pauseBtn.style.display='none';buildSlotGrid();showOnly(slotScreen);sfx.pop();}
 
 // --- Lojinha ---
 function buyItem(cat,idx){
@@ -1841,7 +1853,7 @@ function buyItem(cat,idx){
 }
 
 started=false;paused=false;resetWorld(0);buildSlotGrid();
-function startLevel(idx){resetWorld(idx);[titleScreen,dressScreen,levelScreen,completeScreen,finalScreen].forEach(s=>s.classList.remove('show'));dressBtn.style.display='block';mapBtn.style.display='block';started=true;paused=false;sfx.star();showMsg(LEVELS[idx].name+' 🎬');}
+function startLevel(idx){resetWorld(idx);[titleScreen,dressScreen,levelScreen,completeScreen,finalScreen,pauseScreen].forEach(s=>s.classList.remove('show'));dressBtn.style.display='block';mapBtn.style.display='block';pauseBtn.style.display='block';started=true;paused=false;sfx.star();showMsg(LEVELS[idx].name+' 🎬');}
 document.getElementById('startBtn').addEventListener('click',()=>{initAudio();updateCoinsHud();buildVitrine();titleScreen.classList.remove('show');dressScreen.classList.add('show');sfx.pop();});
 document.getElementById('playBtn').addEventListener('click',()=>{initAudio();dressScreen.classList.remove('show');if(started){paused=false;sfx.star();}else{buildLevelGrid();levelScreen.classList.add('show');sfx.pop();}});
 dressBtn.addEventListener('click',()=>{paused=true;updateCoinsHud();buildVitrine();dressScreen.classList.add('show');sfx.pop();});
@@ -1851,6 +1863,23 @@ document.getElementById('mapFromComplete').addEventListener('click',()=>{complet
 document.getElementById('restartAllBtn').addEventListener('click',()=>{totalScore=0;finalScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');});
 document.getElementById('switchSlotBtn1').addEventListener('click',goToSlots);
 document.getElementById('switchSlotBtn2').addEventListener('click',goToSlots);
+
+// --- Menu de pausa ---
+pauseBtn.addEventListener('click',()=>{
+  paused=true;
+  document.getElementById('pauseLevelName').textContent=currentLevel?(currentLevel.name+' — '+currentLevel.subtitle):'';
+  pauseScreen.classList.add('show');sfx.pop();
+});
+document.getElementById('resumeBtn').addEventListener('click',()=>{pauseScreen.classList.remove('show');paused=false;sfx.star();});
+document.getElementById('restartLevelBtn').addEventListener('click',()=>{pauseScreen.classList.remove('show');startLevel(currentLevelIdx);showMsg('Fase reiniciada! 🔄');});
+document.getElementById('pauseMapBtn').addEventListener('click',()=>{pauseScreen.classList.remove('show');buildLevelGrid();levelScreen.classList.add('show');sfx.pop();});
+document.getElementById('pauseDressBtn').addEventListener('click',()=>{pauseScreen.classList.remove('show');updateCoinsHud();buildVitrine();dressScreen.classList.add('show');sfx.pop();});
+document.getElementById('pauseSwitchSlotBtn').addEventListener('click',()=>{pauseScreen.classList.remove('show');goToSlots();});
+document.getElementById('pauseHomeBtn').addEventListener('click',()=>{
+  pauseScreen.classList.remove('show');saveActive();started=false;paused=true;
+  dressBtn.style.display='none';mapBtn.style.display='none';pauseBtn.style.display='none';
+  showOnly(titleScreen);sfx.pop();
+});
 
 // botão de roupa também precisa fechar o provador e voltar pro jogo
 document.getElementById('playBtnInGameClose');
