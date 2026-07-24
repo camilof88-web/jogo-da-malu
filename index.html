@@ -265,7 +265,7 @@ function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,reach){
   reach=reach===undefined?0.86:reach;
   const l1=13,l2=11,full=l1+l2;
   const tx=shX+Math.sin(angle)*full*reach,ty=shY+Math.cos(angle)*full*reach;
-  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,l1,l2,-1);
+  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,l1,l2,front?1:-1);
   g.lineCap='round';
   g.strokeStyle=skinCol;g.lineWidth=front?6.5:6;g.beginPath();g.moveTo(kx,ky);g.lineTo(ex,ey);g.stroke();
   g.strokeStyle=sleeveCol;g.lineWidth=front?7.8:7.2;g.beginPath();g.moveTo(shX,shY);g.lineTo(kx,ky);g.stroke();
@@ -274,7 +274,7 @@ function drawArm(g,shX,shY,angle,sleeveCol,skinCol,front,reach){
 }
 // Aponta o braço exatamente para um alvo (guidão etc) com cotovelo real via IK
 function drawArmTo(g,shX,shY,tx,ty,sleeveCol,skinCol,front){
-  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,13,11,-1);
+  const{kx,ky,ex,ey}=solveIK2(shX,shY,tx,ty,13,11,front?1:-1);
   g.lineCap='round';
   g.strokeStyle=skinCol;g.lineWidth=front?6.5:6;g.beginPath();g.moveTo(kx,ky);g.lineTo(ex,ey);g.stroke();
   g.strokeStyle=sleeveCol;g.lineWidth=front?7.8:7.2;g.beginPath();g.moveTo(shX,shY);g.lineTo(kx,ky);g.stroke();
@@ -303,7 +303,7 @@ function drawHelmet(g,hy,R,hlx,hly){
 }
 // perna com joelho real (IK) — hipX fixo em -24, alvo do pé pode estar em qualquer lugar
 function drawLegIK(g,hipX,footX,footY,legCol,legW,shoeType,front,bendSign){
-  const{kx,ky,ex,ey}=solveIK2(hipX,-24,footX,footY,9,8.5,bendSign===undefined?-1:bendSign);
+  const{kx,ky,ex,ey}=solveIK2(hipX,-24,footX,footY,9,8.5,bendSign===undefined?(front?1:-1):bendSign);
   g.strokeStyle=legCol;g.lineWidth=legW;g.lineCap='round';
   g.beginPath();g.moveTo(hipX,-24);g.lineTo(kx,ky);g.lineTo(ex,ey);g.stroke();
   g.save();g.translate(ex,ey+9);drawShoe(g,0,shoeType,front);g.restore();
@@ -462,15 +462,24 @@ function renderMalu(g,o){
     for(let i=0;i<2;i++){
       const ph=phase+i*Math.PI;
       const px=rig.crank.x+Math.sin(ph)*rig.pedalR,py=rig.crank.y-Math.cos(ph)*rig.pedalR*0.55;
-      drawLegIK(g,i===0?-5:5,px,py,i===0?legCol:legColF,legW,o.shoes,i===1,1);
+      drawLegIK(g,i===0?-5:5,px,py,i===0?legCol:legColF,legW,o.shoes,i===1);
     }
   }else if(o.ride==='patinete'){
     // em pé, pés juntos no deck do patinete
     const rig=rideRig;
     drawLegIK(g,-5,rig.footL.x,rig.footL.y,legCol,legW,o.shoes,false);
     drawLegIK(g,5,rig.footR.x,rig.footR.y,legColF,legW,o.shoes,true);
+  }else if(o.airborne){
+    // pulo: joelhos dobram de verdade — recolhida subindo (tipo Mario), esticada preparando o pouso caindo
+    if(o.rising){
+      drawLegIK(g,-5,-2,-17,legCol,legW,o.shoes,false);
+      drawLegIK(g,5,3,-16,legColF,legW,o.shoes,true);
+    }else{
+      drawLegIK(g,-5,-4,-7,legCol,legW,o.shoes,false);
+      drawLegIK(g,5,9,-4,legColF,legW,o.shoes,true);
+    }
   }else{
-    // andando/parada/patins/pulando: ciclo normal, com o pé levantando de verdade (não só deslizando)
+    // andando/parada/patins: ciclo normal, com o pé levantando de verdade (não só deslizando)
     const amp2=(o.walkAmp!==undefined?o.walkAmp:1);
     const liftBack=Math.max(0,Math.cos(t))*3.6*amp2,liftFront=Math.max(0,-Math.cos(t))*3.6*amp2;
     const[bex]=drawLegIK(g,-5,-6-ls,-9-liftBack,legCol,legW,o.shoes,false);
@@ -1575,7 +1584,7 @@ function drawMaluInGame(){
   const rideId=LOOKS.ride[look.ride||0].id,wheeled=(rideId==='patinete'||rideId==='bike'||rideId==='ebike');
   renderMalu(ctx,{hair:LOOKS.hair[look.hair].id,outfit:LOOKS.outfit[look.outfit].id,shoes:LOOKS.shoes[look.shoes].id,skin:LOOKS.skin[look.skin].id,acc:LOOKS.acc[look.acc].id,ride:rideId,
     legSwing:wheeled?0:(airborne?(rising?3:7):Math.sin(t)*7*amp),
-    walkAmp:airborne?0:amp,
+    walkAmp:airborne?0:amp,airborne,rising,
     armF,armB,
     bodyBob:bodyBobV,
     headBob:player.headBob,
